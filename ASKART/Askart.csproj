@@ -9,11 +9,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Resources\login_background.png" />
     <None Remove="Resources\logo.png" />
+    <None Remove="Resources\registr_background.png" />
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Resources\login_background.png" />
     <Resource Include="Resources\logo.png" />
+    <Resource Include="Resources\registr_background.png" />
   </ItemGroup>
 
 </Project>

@@ -56,4 +56,13 @@
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource LightErrorColor}"/>
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource LightCardBackground}"/>
 
+    <!-- Изображение для фона -->
+    <ImageBrush x:Key="RegistrBackgroundImageBrush" 
+            ImageSource="/Resources/registr_background.png"
+            Stretch="UniformToFill"/>
+
+    <ImageBrush x:Key="LoginBackgroundImageBrush" 
+        ImageSource="/Resources/login_background.png"
+        Stretch="UniformToFill"/>
+
 </ResourceDictionary>

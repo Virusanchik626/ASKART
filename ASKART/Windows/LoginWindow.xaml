@@ -5,7 +5,7 @@
         Height="700" 
         Width="1000"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BackgroundBrush}"
+        Background="{StaticResource LoginBackgroundImageBrush}"
         ResizeMode="NoResize"
         Icon="/Resources/logo.png">
 

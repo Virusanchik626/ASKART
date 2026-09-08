@@ -1,0 +1,111 @@
+﻿<Window x:Class="Askart.Windows.ProfileWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Профиль - Askart" 
+        Height="600" 
+        Width="500"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BackgroundBrush}"
+        ResizeMode="NoResize"
+        Icon="/Resources/logo.png">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <Border Grid.Row="0" Background="{StaticResource ActiveBrush}" Padding="20">
+            <TextBlock Text="Профиль и настройки" 
+                       FontFamily="{StaticResource Roboto}"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       Foreground="White"/>
+        </Border>
+
+        <!-- Контент -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="20">
+                <!-- Аватар -->
+                <Ellipse Width="100" Height="100" Fill="{StaticResource ActiveBrush}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <TextBlock Text="👤" FontSize="48" HorizontalAlignment="Center" Margin="0,-90,0,0"/>
+
+                <!-- Информация -->
+                <TextBlock Text="Информация" 
+                           FontFamily="{StaticResource Roboto}"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           Margin="0,0,0,15"/>
+
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Имя:" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="NameText" Grid.Column="1" Style="{StaticResource TitleTextStyle}" FontSize="14"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Email:" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="EmailText" Grid.Column="1" Style="{StaticResource TitleTextStyle}" FontSize="14"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Телефон:" Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="PhoneText" Grid.Column="1" Style="{StaticResource TitleTextStyle}" FontSize="14"/>
+                </Grid>
+
+                <Separator Margin="0,10"/>
+
+                <!-- Настройки -->
+                <TextBlock Text="Настройки" 
+                           FontFamily="{StaticResource Roboto}"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           Margin="0,20,0,15"/>
+
+                <Grid Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Тёмная тема" 
+                               FontFamily="{StaticResource Roboto}"
+                               VerticalAlignment="Center"/>
+                    <ToggleButton x:Name="ThemeToggle" 
+                                  Grid.Column="1"
+                                  Width="50" 
+                                  Height="25"
+                                  Click="ThemeToggle_Click"/>
+                </Grid>
+
+                <Separator Margin="0,10"/>
+
+                <!-- Выход -->
+                <Button Content="Выйти из аккаунта"
+                        Background="{StaticResource ErrorBrush}"
+                        Foreground="White"
+                        Padding="15,10"
+                        BorderThickness="0"
+                        
+                        FontFamily="{StaticResource Roboto}"
+                        Margin="0,20,0,0"
+                        Cursor="Hand"
+                        Click="Logout_Click"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

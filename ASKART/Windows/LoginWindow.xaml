@@ -1,0 +1,96 @@
+﻿<Window x:Class="Askart.Windows.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Авторизация - Askart" 
+        Height="700" 
+        Width="1000"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BackgroundBrush}"
+        ResizeMode="NoResize"
+        Icon="/Resources/logo.png">
+
+    <Grid>
+        <!-- Фон с горами (заглушка) -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Декоративный фон -->
+        <Rectangle Grid.Row="0" Fill="{StaticResource ActiveBrush}" Opacity="0.1"/>
+
+        
+
+        <!-- Карточка авторизации -->
+        <Border Grid.Row="0" 
+                Background="{StaticResource CardBackgroundBrush}"
+                CornerRadius="20" 
+                Padding="40" 
+                Width="400" 
+                Height="500"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center">
+
+            <StackPanel>
+                <!-- Заголовок -->
+                <TextBlock Text="Авторизация" 
+                           Style="{StaticResource TitleTextStyle}"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,30"/>
+
+                <!-- Поле почты -->
+                <TextBlock Text="почта" 
+                           Style="{StaticResource SecondaryTextStyle}"
+                           Margin="0,0,0,5"/>
+                <TextBox x:Name="EmailTextBox" 
+                         Style="{StaticResource InputTextBoxStyle}"
+                         Margin="0,0,0,20"
+                         Text="test@test.com"/>
+
+                <!-- Поле пароля -->
+                <TextBlock Text="пароль" 
+                           Style="{StaticResource SecondaryTextStyle}"
+                           Margin="0,0,0,5"/>
+                <PasswordBox x:Name="PasswordBox" 
+                             Style="{StaticResource PasswordBoxStyle}"
+                             Margin="0,0,0,15"
+                             Password="123456"/>
+
+                <!-- Запомнить меня и забыл пароль -->
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <CheckBox x:Name="RememberMeCheckBox" 
+                              Content="запомнить меня"
+                              FontFamily="{StaticResource Roboto}"
+                              FontSize="12"
+                              VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Column="1" 
+                               Text="забыл пароль"
+                               Style="{StaticResource LinkTextStyle}"
+                               MouseLeftButtonDown="ForgotPassword_Click"
+                               VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Кнопка войти -->
+                <Button Content="Войти" 
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Click="Login_Click"
+                        Margin="0,0,0,20"/>
+
+                <!-- Регистрация -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="Ещё нет аккаунта? " 
+                               Style="{StaticResource SecondaryTextStyle}"/>
+                    <TextBlock Text="Зарегистрироваться"
+                               Style="{StaticResource LinkTextStyle}"
+                               MouseLeftButtonDown="Register_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

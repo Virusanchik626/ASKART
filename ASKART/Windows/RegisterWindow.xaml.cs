@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Input;
 using Askart.MockData;
+using Askart.Models;
 
 namespace Askart.Windows
 {
@@ -17,25 +18,44 @@ namespace Askart.Windows
             string lastName = LastNameTextBox.Text.Trim();
             string email = EmailTextBox.Text.Trim();
             string password = PasswordBox.Password;
+            string phone = PhoneTextBox?.Text.Trim() ?? "";
 
+            // Валидация полей
             if (string.IsNullOrWhiteSpace(firstName) ||
                 string.IsNullOrWhiteSpace(lastName) ||
                 string.IsNullOrWhiteSpace(email) ||
                 string.IsNullOrWhiteSpace(password))
             {
-                MessageBox.Show("Пожалуйста, заполните все поля", "Ошибка",
+                MessageBox.Show("Пожалуйста, заполните все обязательные поля", "Ошибка",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (password.Length < 6)
+            // Валидация почты
+            if (!User.IsValidEmail(email))
             {
-                MessageBox.Show("Пароль должен содержать минимум 6 символов", "Ошибка",
+                MessageBox.Show("Неверный формат почты. Пример: user@example.com", "Ошибка",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            bool success = DataInitializer.RegisterUser(firstName, lastName, email, password);
+            // Валидация пароля (минимум 8 символов)
+            if (!User.IsValidPassword(password))
+            {
+                MessageBox.Show("Пароль должен содержать минимум 8 символов", "Ошибка",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Валидация телефона (если указан)
+            if (!string.IsNullOrWhiteSpace(phone) && !User.IsValidPhone(phone))
+            {
+                MessageBox.Show("Неверный формат телефона. Пример: +79991234567", "Ошибка",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            bool success = DataInitializer.RegisterUser(firstName, lastName, email, password, phone);
 
             if (success)
             {

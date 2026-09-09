@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using System.Windows.Controls.Primitives;
 
 namespace Askart.Windows
 {
@@ -9,7 +8,6 @@ namespace Askart.Windows
         {
             InitializeComponent();
             LoadUserData();
-            ThemeToggle.IsChecked = App.IsDarkTheme;
         }
 
         private void LoadUserData()
@@ -20,24 +18,6 @@ namespace Askart.Windows
                 EmailText.Text = App.CurrentUser.Email;
                 PhoneText.Text = App.CurrentUser.Number;
             }
-        }
-
-        private void ThemeToggle_Click(object sender, RoutedEventArgs e)
-        {
-            App.ToggleTheme();
-
-            // Перезагружаем все окна для применения темы
-            foreach (Window window in Application.Current.Windows)
-            {
-                if (window != this)
-                {
-                    window.Close();
-                }
-            }
-
-            var mainWindow = new MainWindow();
-            mainWindow.Show();
-            this.Close();
         }
 
         private void Logout_Click(object sender, RoutedEventArgs e)

@@ -12,17 +12,6 @@
     <Color x:Key="LightErrorColor">#F44336</Color>
     <Color x:Key="LightCardBackground">#FFFFFF</Color>
 
-    <!-- Тёмная тема -->
-    <Color x:Key="DarkBackgroundColor">#1A1A2E</Color>
-    <Color x:Key="DarkSecondaryBackgroundColor">#16213E</Color>
-    <Color x:Key="DarkPrimaryTextColor">#FFFFFF</Color>
-    <Color x:Key="DarkSecondaryTextColor">#B0B0B0</Color>
-    <Color x:Key="DarkInactiveTextColor">#757575</Color>
-    <Color x:Key="DarkActiveColor">#5DD4FF</Color>
-    <Color x:Key="DarkSuccessColor">#81C784</Color>
-    <Color x:Key="DarkErrorColor">#E57373</Color>
-    <Color x:Key="DarkCardBackground">#0F3460</Color>
-
     <!-- Кисти светлой темы -->
     <SolidColorBrush x:Key="LightBackgroundBrush" Color="{StaticResource LightBackgroundColor}"/>
     <SolidColorBrush x:Key="LightSecondaryBackgroundBrush" Color="{StaticResource LightSecondaryBackgroundColor}"/>
@@ -34,18 +23,7 @@
     <SolidColorBrush x:Key="LightErrorBrush" Color="{StaticResource LightErrorColor}"/>
     <SolidColorBrush x:Key="LightCardBackgroundBrush" Color="{StaticResource LightCardBackground}"/>
 
-    <!-- Кисти тёмной темы -->
-    <SolidColorBrush x:Key="DarkBackgroundBrush" Color="{StaticResource DarkBackgroundColor}"/>
-    <SolidColorBrush x:Key="DarkSecondaryBackgroundBrush" Color="{StaticResource DarkSecondaryBackgroundColor}"/>
-    <SolidColorBrush x:Key="DarkPrimaryTextBrush" Color="{StaticResource DarkPrimaryTextColor}"/>
-    <SolidColorBrush x:Key="DarkSecondaryTextBrush" Color="{StaticResource DarkSecondaryTextColor}"/>
-    <SolidColorBrush x:Key="DarkInactiveTextBrush" Color="{StaticResource DarkInactiveTextColor}"/>
-    <SolidColorBrush x:Key="DarkActiveBrush" Color="{StaticResource DarkActiveColor}"/>
-    <SolidColorBrush x:Key="DarkSuccessBrush" Color="{StaticResource DarkSuccessColor}"/>
-    <SolidColorBrush x:Key="DarkErrorBrush" Color="{StaticResource DarkErrorColor}"/>
-    <SolidColorBrush x:Key="DarkCardBackgroundBrush" Color="{StaticResource DarkCardBackground}"/>
-
-    <!-- Текущая тема (по умолчанию светлая) -->
+    <!-- Текущая тема (светлая) -->
     <SolidColorBrush x:Key="BackgroundBrush" Color="{StaticResource LightBackgroundColor}"/>
     <SolidColorBrush x:Key="SecondaryBackgroundBrush" Color="{StaticResource LightSecondaryBackgroundColor}"/>
     <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource LightPrimaryTextColor}"/>
@@ -55,14 +33,5 @@
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource LightSuccessColor}"/>
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource LightErrorColor}"/>
     <SolidColorBrush x:Key="CardBackgroundBrush" Color="{StaticResource LightCardBackground}"/>
-
-    <!-- Изображение для фона -->
-    <ImageBrush x:Key="RegistrBackgroundImageBrush" 
-            ImageSource="/Resources/registr_background.png"
-            Stretch="UniformToFill"/>
-
-    <ImageBrush x:Key="LoginBackgroundImageBrush" 
-        ImageSource="/Resources/login_background.png"
-        Stretch="UniformToFill"/>
 
 </ResourceDictionary>

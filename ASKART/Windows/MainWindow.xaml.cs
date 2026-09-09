@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -10,6 +11,8 @@ namespace Askart.Windows
     public partial class MainWindow : Window
     {
         private Chat currentChat;
+        private Message _replyingTo = null;
+        private bool showArchived = false;
 
         public MainWindow()
         {
@@ -18,11 +21,35 @@ namespace Askart.Windows
             UpdateUserInfo();
         }
 
+        private void MessageTextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.None)
+            {
+                e.Handled = true;
+                Send_Click(sender, e);
+            }
+            else if (e.Key == Key.Enter && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                e.Handled = true;
+                Send_Click(sender, e);
+            }
+        }
+
         private void LoadChats()
         {
             ChatListPanel.Children.Clear();
 
-            foreach (var chat in DataInitializer.Chats)
+            var chatsToShow = DataInitializer.Chats
+                .Where(c => showArchived ? true : !c.IsArchived)
+                .ToList();
+
+            string searchText = SearchTextBox?.Text?.ToLower() ?? "";
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                chatsToShow = chatsToShow.Where(c => c.Name.ToLower().Contains(searchText)).ToList();
+            }
+
+            foreach (var chat in chatsToShow)
             {
                 var chatCard = CreateChatCard(chat);
                 ChatListPanel.Children.Add(chatCard);
@@ -41,13 +68,12 @@ namespace Askart.Windows
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(50) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            // Аватар
             var avatarBorder = new Border
             {
                 Width = 45,
                 Height = 45,
                 CornerRadius = new CornerRadius(22.5),
-                Background = (Brush)FindResource("ActiveBrush"),
+                Background = new SolidColorBrush(Color.FromRgb(100, 150, 200)),
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center
             };
@@ -61,11 +87,9 @@ namespace Askart.Windows
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-
             avatarBorder.Child = avatarText;
             Grid.SetColumn(avatarBorder, 0);
 
-            // Информация о чате
             var stackPanel = new StackPanel
             {
                 VerticalAlignment = VerticalAlignment.Center,
@@ -74,7 +98,7 @@ namespace Askart.Windows
 
             var nameText = new TextBlock
             {
-                Text = chat.Name,
+                Text = chat.Name + (chat.IsArchived ? " 📦" : ""),
                 FontFamily = (FontFamily)FindResource("Roboto"),
                 FontWeight = FontWeights.SemiBold,
                 Foreground = (Brush)FindResource("PrimaryTextBrush"),
@@ -91,45 +115,123 @@ namespace Askart.Windows
 
             stackPanel.Children.Add(nameText);
             stackPanel.Children.Add(typeText);
-
             Grid.SetColumn(stackPanel, 1);
 
             grid.Children.Add(avatarBorder);
             grid.Children.Add(stackPanel);
-
             border.Child = grid;
 
-            // Обработчик клика
             border.MouseLeftButtonDown += (s, e) => SelectChat(chat);
-
             return border;
         }
 
         private void SelectChat(Chat chat)
         {
             currentChat = chat;
+            _replyingTo = null;
+            ReplyPanel.Visibility = Visibility.Collapsed;
 
-            // Показываем область чата
             WelcomePanel.Visibility = Visibility.Collapsed;
             ChatHeader.Visibility = Visibility.Visible;
             MessagesScroll.Visibility = Visibility.Visible;
             InputArea.Visibility = Visibility.Visible;
 
-            // Обновляем заголовок
-            ChatNameText.Text = chat.Name;
-            ChatTypeText.Text = chat.TypeGroup != null ?
-                $"{chat.TypeChat} • {chat.TypeGroup}" :
-                chat.TypeChat;
+            ChatNameText.Text = chat.Name + (chat.IsArchived ? " " : "");
 
-            // Показываем кнопку канбана для рабочих чатов
-            KanbanButton.Visibility = chat.TypeGroup == "Рабочая" ?
-                Visibility.Visible : Visibility.Collapsed;
+            string statusText = chat.TypeGroup != null ?
+                $"{chat.TypeChat} • {chat.TypeGroup}" : chat.TypeChat;
 
-            // Загружаем сообщения
+            if (chat.TypeChat == "Личный" && chat.Members.Count > 0)
+            {
+                var otherMember = chat.Members.FirstOrDefault(m => m.UserId != App.CurrentUser.Id);
+                if (otherMember != null)
+                    statusText += " • Онлайн";
+            }
+
+            ChatTypeText.Text = statusText;
+
+            bool isAdmin = chat.IsAdmin(App.CurrentUser.Id);
+
+            KanbanButton.Visibility = chat.TypeGroup == "Рабочая" ? Visibility.Visible : Visibility.Collapsed;
+            MembersButton.Visibility = Visibility.Visible;
+            PinnedButton.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            StatsButton.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            ArchiveButton.Visibility = isAdmin ? Visibility.Visible : Visibility.Collapsed;
+            ArchiveButton.Content = chat.IsArchived ? "📤 Разархивировать" : "📦 Архивировать";
+
+            UpdatePinnedBar();
             LoadMessages();
-
-            // Подсвечиваем выбранный чат
             UpdateChatSelection();
+        }
+
+        private void UpdatePinnedBar()
+        {
+            var pinnedMessages = currentChat.Messages.Where(m => m.IsPinned).OrderByDescending(m => m.SendTime).ToList();
+
+            if (pinnedMessages.Count > 0)
+            {
+                PinnedBar.Visibility = Visibility.Visible;
+                var lastPinned = pinnedMessages.First();
+                PinnedBarText.Text = $"{lastPinned.SenderName}: {lastPinned.Text} (всего закреплённых: {pinnedMessages.Count})";
+            }
+            else
+            {
+                PinnedBar.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void PinnedBar_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (currentChat != null)
+            {
+                var window = new PinnedMessagesWindow(currentChat);
+                window.Owner = this;
+                window.ShowDialog();
+            }
+        }
+
+        private void Pinned_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentChat != null)
+            {
+                var window = new PinnedMessagesWindow(currentChat);
+                window.Owner = this;
+                window.ShowDialog();
+            }
+        }
+
+        private void Stats_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentChat != null)
+            {
+                var window = new ChatStatisticsWindow(currentChat);
+                window.Owner = this;
+                window.ShowDialog();
+            }
+        }
+
+        private void Archive_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentChat == null) return;
+
+            bool isAdmin = currentChat.IsAdmin(App.CurrentUser.Id);
+            if (!isAdmin)
+            {
+                MessageBox.Show("Только администратор может архивировать чат", "Ошибка",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string action = currentChat.IsArchived ? "разархивировать" : "архивировать";
+            var result = MessageBox.Show($"Вы действительно хотите {action} чат \"{currentChat.Name}\"?",
+                "Архивация", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                currentChat.IsArchived = !currentChat.IsArchived;
+                LoadChats();
+                SelectChat(currentChat);
+            }
         }
 
         private void UpdateChatSelection()
@@ -138,18 +240,19 @@ namespace Askart.Windows
             {
                 if (child is Border border)
                 {
-                    // Сбрасываем выделение
                     border.Background = (Brush)FindResource("CardBackgroundBrush");
 
-                    // Проверяем, это ли выбранный чат
                     if (border.Child is Grid grid &&
                         grid.Children.Count > 1 &&
                         grid.Children[1] is StackPanel sp &&
                         sp.Children.Count > 0 &&
-                        sp.Children[0] is TextBlock tb &&
-                        tb.Text == currentChat?.Name)
+                        sp.Children[0] is TextBlock tb)
                     {
-                        border.Background = (Brush)FindResource("ActiveBrush");
+                        string chatName = tb.Text.Replace(" 📦", "");
+                        if (chatName == currentChat?.Name)
+                        {
+                            border.Background = (Brush)FindResource("ActiveBrush");
+                        }
                     }
                 }
             }
@@ -180,65 +283,318 @@ namespace Askart.Windows
                     HorizontalAlignment.Right : HorizontalAlignment.Left
             };
 
-            if (message.SenderId == App.CurrentUser.Id)
+            bool isOwn = message.SenderId == App.CurrentUser.Id;
+            bool isAdmin = currentChat.IsAdmin(App.CurrentUser.Id);
+
+            border.Background = isOwn ? (Brush)FindResource("ActiveBrush") : (Brush)FindResource("SecondaryBackgroundBrush");
+
+            if (message.IsPinned)
             {
-                border.Background = (Brush)FindResource("ActiveBrush");
-            }
-            else
-            {
-                border.Background = (Brush)FindResource("SecondaryBackgroundBrush");
+                border.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7));
+                border.BorderThickness = new Thickness(2, 2, 2, 2);
             }
 
             var stackPanel = new StackPanel();
 
+            // Заголовок с кнопками действий
+            var headerGrid = new Grid();
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
             var nameText = new TextBlock
             {
-                Text = message.SenderName,
+                Text = message.SenderName + (message.IsPinned ? " 📌" : ""),
                 FontFamily = (FontFamily)FindResource("Roboto"),
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = message.SenderId == App.CurrentUser.Id ? Brushes.White : (Brush)FindResource("SecondaryTextBrush"),
-                Margin = new Thickness(0, 0, 0, 5)
+                Foreground = isOwn ? Brushes.White : (Brush)FindResource("SecondaryTextBrush"),
+                Margin = new Thickness(0, 0, 0, 5),
+                VerticalAlignment = VerticalAlignment.Center
             };
+            Grid.SetColumn(nameText, 0);
+
+            if (isOwn || isAdmin)
+            {
+                var actionsPanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+
+                if (isOwn)
+                {
+                    var editBtn = CreateActionButton("", isOwn ? Brushes.White : (Brush)FindResource("SecondaryTextBrush"), "Редактировать");
+                    editBtn.Click += (s, ev) => EditMessage(message);
+                    actionsPanel.Children.Add(editBtn);
+                }
+
+                var deleteBtn = CreateActionButton("✕", isOwn ? Brushes.White : (Brush)FindResource("ErrorBrush"),
+                    isAdmin && !isOwn ? "Удалить (админ)" : "Удалить");
+                deleteBtn.Click += (s, ev) => DeleteMessage(message);
+                actionsPanel.Children.Add(deleteBtn);
+
+                if (isAdmin)
+                {
+                    var pinBtn = CreateActionButton(message.IsPinned ? "📍" : "",
+                        isOwn ? Brushes.White : (Brush)FindResource("SecondaryTextBrush"),
+                        message.IsPinned ? "Открепить" : "Закрепить");
+                    pinBtn.Click += (s, ev) => TogglePinMessage(message);
+                    actionsPanel.Children.Add(pinBtn);
+                }
+
+                var replyBtn = CreateActionButton("↩", isOwn ? Brushes.White : (Brush)FindResource("SecondaryTextBrush"), "Ответить");
+                replyBtn.Click += (s, ev) => ReplyToMessage(message);
+                actionsPanel.Children.Add(replyBtn);
+
+                Grid.SetColumn(actionsPanel, 1);
+                headerGrid.Children.Add(actionsPanel);
+            }
+
+            headerGrid.Children.Add(nameText);
+            stackPanel.Children.Add(headerGrid);
+
+            // Пересланное сообщение
+            if (message.ReplyId.HasValue)
+            {
+                var replied = currentChat.Messages.FirstOrDefault(m => m.Id == message.ReplyId.Value);
+                if (replied != null)
+                {
+                    var replyBorder = new Border
+                    {
+                        Background = new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)),
+                        CornerRadius = new CornerRadius(6),
+                        Padding = new Thickness(8, 6, 8, 6),
+                        Margin = new Thickness(0, 5, 0, 5),
+                        BorderBrush = new SolidColorBrush(Color.FromRgb(100, 200, 255)),
+                        BorderThickness = new Thickness(2, 0, 0, 0)
+                    };
+
+                    var replyText = new TextBlock
+                    {
+                        Text = $"↩ {replied.SenderName}: {replied.Text}",
+                        FontFamily = (FontFamily)FindResource("Roboto"),
+                        FontSize = 11,
+                        FontStyle = FontStyles.Italic,
+                        Foreground = isOwn ? new SolidColorBrush(Color.FromRgb(200, 240, 255)) : (Brush)FindResource("SecondaryTextBrush"),
+                        TextWrapping = TextWrapping.Wrap,
+                        MaxHeight = 40
+                    };
+                    replyBorder.Child = replyText;
+                    stackPanel.Children.Add(replyBorder);
+                }
+            }
 
             var messageText = new TextBlock
             {
                 Text = message.Text,
                 FontFamily = (FontFamily)FindResource("Roboto"),
                 FontSize = 14,
-                Foreground = message.SenderId == App.CurrentUser.Id ? Brushes.White : (Brush)FindResource("PrimaryTextBrush"),
+                Foreground = isOwn ? Brushes.White : (Brush)FindResource("PrimaryTextBrush"),
                 TextWrapping = TextWrapping.Wrap
             };
+            stackPanel.Children.Add(messageText);
 
             var timeText = new TextBlock
             {
-                Text = message.SendTime.ToString("HH:mm"),
+                Text = message.SendTime.ToString("HH:mm") + (message.EditTime.HasValue ? " (ред.)" : ""),
                 FontFamily = (FontFamily)FindResource("Roboto"),
                 FontSize = 11,
-                Foreground = message.SenderId == App.CurrentUser.Id ?
-                    new SolidColorBrush(Color.FromRgb(200, 240, 255)) : (Brush)FindResource("InactiveTextBrush"),
+                Foreground = isOwn ? new SolidColorBrush(Color.FromRgb(200, 240, 255)) : (Brush)FindResource("InactiveTextBrush"),
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Margin = new Thickness(0, 5, 0, 0)
             };
-
-            stackPanel.Children.Add(nameText);
-            stackPanel.Children.Add(messageText);
             stackPanel.Children.Add(timeText);
 
             border.Child = stackPanel;
 
+            // Контекстное меню
+            var contextMenu = new ContextMenu();
+            var copyItem = new MenuItem { Header = "Копировать" };
+            copyItem.Click += (s, ev) => Clipboard.SetText(message.Text);
+            contextMenu.Items.Add(copyItem);
+
+            var replyItem = new MenuItem { Header = "↩ Ответить" };
+            replyItem.Click += (s, ev) => ReplyToMessage(message);
+            contextMenu.Items.Add(replyItem);
+
+            if (isOwn)
+            {
+                var editItem = new MenuItem { Header = "️ Редактировать" };
+                editItem.Click += (s, ev) => EditMessage(message);
+                contextMenu.Items.Add(editItem);
+            }
+
+            if (isOwn || isAdmin)
+            {
+                var deleteItem = new MenuItem { Header = "✕ Удалить" };
+                deleteItem.Click += (s, ev) => DeleteMessage(message);
+                contextMenu.Items.Add(deleteItem);
+            }
+
+            if (isAdmin)
+            {
+                var pinItem = new MenuItem { Header = message.IsPinned ? "📍 Открепить" : " Закрепить" };
+                pinItem.Click += (s, ev) => TogglePinMessage(message);
+                contextMenu.Items.Add(pinItem);
+            }
+
+            border.ContextMenu = contextMenu;
+
             return border;
+        }
+
+        private Button CreateActionButton(string content, Brush foreground, string tooltip)
+        {
+            return new Button
+            {
+                Content = content,
+                Background = Brushes.Transparent,
+                Foreground = foreground,
+                BorderThickness = new Thickness(0),
+                FontSize = 12,
+                Cursor = Cursors.Hand,
+                Padding = new Thickness(4, 0, 4, 0),
+                ToolTip = tooltip
+            };
+        }
+
+        private void EditMessage(Message message)
+        {
+            var editWindow = new Window
+            {
+                Title = "Редактировать сообщение",
+                Width = 400,
+                Height = 250,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                Icon = new System.Windows.Media.Imaging.BitmapImage(
+                    new Uri("pack://application:,,,/Resources/logo.png", UriKind.Absolute)),
+                Background = (Brush)FindResource("BackgroundBrush")
+            };
+
+            var stackPanel = new StackPanel { Margin = new Thickness(20, 20, 20, 20) };
+
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "Текст сообщения",
+                FontFamily = (FontFamily)FindResource("Roboto"),
+                Margin = new Thickness(0, 0, 0, 10)
+            });
+
+            var textBox = new TextBox
+            {
+                Style = (Style)FindResource("InputTextBoxStyle"),
+                Text = message.Text,
+                Height = 80,
+                TextWrapping = TextWrapping.Wrap,
+                AcceptsReturn = true,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            stackPanel.Children.Add(textBox);
+
+            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+
+            var cancelBtn = new Button
+            {
+                Content = "Отмена",
+                Padding = new Thickness(15, 8, 15, 8),
+                Margin = new Thickness(0, 0, 10, 0),
+                Background = Brushes.Transparent,
+                BorderBrush = (Brush)FindResource("SecondaryTextBrush"),
+                BorderThickness = new Thickness(1, 1, 1, 1),
+                Cursor = Cursors.Hand
+            };
+            cancelBtn.Click += (s, ev) => editWindow.Close();
+
+            var saveBtn = new Button
+            {
+                Content = "Сохранить",
+                Style = (Style)FindResource("StandardButtonStyle"),
+                Padding = new Thickness(15, 8, 15, 8)
+            };
+            saveBtn.Click += (s, ev) =>
+            {
+                if (string.IsNullOrWhiteSpace(textBox.Text))
+                {
+                    MessageBox.Show("Сообщение не может быть пустым", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                message.Text = textBox.Text;
+                message.EditTime = DateTime.Now;
+                editWindow.Close();
+                LoadMessages();
+            };
+
+            buttonPanel.Children.Add(cancelBtn);
+            buttonPanel.Children.Add(saveBtn);
+            stackPanel.Children.Add(buttonPanel);
+
+            editWindow.Content = stackPanel;
+            editWindow.ShowDialog();
+        }
+
+        private void DeleteMessage(Message message)
+        {
+            bool isOwn = message.SenderId == App.CurrentUser.Id;
+            bool isAdmin = currentChat.IsAdmin(App.CurrentUser.Id);
+
+            if (!isOwn && !isAdmin) return;
+
+            string confirmText = isOwn
+                ? "Удалить ваше сообщение?"
+                : $"Удалить сообщение пользователя {message.SenderName}? (права администратора)";
+
+            var result = MessageBox.Show(confirmText, "Удаление сообщения",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                currentChat.Messages.Remove(message);
+                LoadMessages();
+                UpdatePinnedBar();
+            }
+        }
+
+        private void TogglePinMessage(Message message)
+        {
+            if (!currentChat.IsAdmin(App.CurrentUser.Id)) return;
+
+            message.IsPinned = !message.IsPinned;
+            LoadMessages();
+            UpdatePinnedBar();
+
+            MessageBox.Show(
+                message.IsPinned ? "Сообщение закреплено 📌" : "Сообщение откреплено",
+                "Закрепление", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void ReplyToMessage(Message message)
+        {
+            _replyingTo = message;
+
+            // Показываем панель ответа
+            ReplyAuthorText.Text = "↩ Ответ на сообщение: " + message.SenderName;
+            string preview = message.Text.Length > 60 ? message.Text.Substring(0, 60) + "..." : message.Text;
+            ReplyPreviewText.Text = preview;
+            ReplyPanel.Visibility = Visibility.Visible;
+
+            MessageTextBox.Focus();
+        }
+
+        private void CancelReply_Click(object sender, RoutedEventArgs e)
+        {
+            _replyingTo = null;
+            ReplyPanel.Visibility = Visibility.Collapsed;
         }
 
         private void Send_Click(object sender, RoutedEventArgs e)
         {
-            if (currentChat == null)
-                return;
+            SendMessage();
+        }
+
+        private void SendMessage()
+        {
+            if (currentChat == null) return;
 
             string text = MessageTextBox.Text.Trim();
-
-            if (string.IsNullOrWhiteSpace(text))
-                return;
+            if (string.IsNullOrWhiteSpace(text)) return;
 
             var message = new Message
             {
@@ -247,13 +603,38 @@ namespace Askart.Windows
                 ChatId = currentChat.Id,
                 SenderId = App.CurrentUser.Id,
                 SenderName = App.CurrentUser.FullName,
-                SendTime = DateTime.Now
+                SendTime = DateTime.Now,
+                ReplyId = _replyingTo?.Id,
+                ReplyTo = _replyingTo
             };
 
             currentChat.Messages.Add(message);
             MessageTextBox.Clear();
+            _replyingTo = null;
+            ReplyPanel.Visibility = Visibility.Collapsed;
 
             LoadMessages();
+        }
+
+        private void Emoji_Click(object sender, RoutedEventArgs e)
+        {
+            var emojiWindow = new EmojiPickerWindow();
+            emojiWindow.Owner = this;
+            if (emojiWindow.ShowDialog() == true)
+            {
+                MessageTextBox.Text += emojiWindow.SelectedEmoji;
+                MessageTextBox.Focus();
+            }
+        }
+
+        private void Members_Click(object sender, RoutedEventArgs e)
+        {
+            if (currentChat != null)
+            {
+                var membersWindow = new MembersWindow(currentChat);
+                membersWindow.Owner = this;
+                membersWindow.ShowDialog();
+            }
         }
 
         private void CreateChat_Click(object sender, RoutedEventArgs e)
@@ -268,10 +649,11 @@ namespace Askart.Windows
                     Name = dialog.ChatName,
                     TypeChat = dialog.IsGroup ? "Группа" : "Личный",
                     TypeGroup = dialog.IsWorkChat ? "Рабочая" : "Личная",
+                    CreatedAt = DateTime.Now,
                     OwnerId = App.CurrentUser.Id,
-                    Members = new List<ChatMember>
+                    Members = new System.Collections.Generic.List<ChatMember>
                     {
-                        new ChatMember { ChatId = DataInitializer.Chats.Count + 1, UserId = App.CurrentUser.Id, Role = "Управляющий" }
+                        new ChatMember { ChatId = DataInitializer.Chats.Count + 1, UserId = App.CurrentUser.Id, Role = "Владелец" }
                     }
                 };
 
@@ -297,6 +679,17 @@ namespace Askart.Windows
             profileWindow.ShowDialog();
         }
 
+        private void Search_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            LoadChats();
+        }
+
+        private void FilterChanged(object sender, RoutedEventArgs e)
+        {
+            showArchived = ShowArchivedCheckBox.IsChecked == true;
+            LoadChats();
+        }
+
         private void UpdateUserInfo()
         {
             if (App.CurrentUser != null)
@@ -306,12 +699,12 @@ namespace Askart.Windows
         }
     }
 
-    // Диалог создания чата
     public class CreateChatDialog : Window
     {
         private TextBox nameTextBox;
-        private CheckBox isGroupCheckBox;
-        private CheckBox isWorkCheckBox;
+        private RadioButton personalRadio;
+        private RadioButton groupRadio;
+        private RadioButton workRadio;
 
         public string ChatName { get; private set; }
         public bool IsGroup { get; private set; }
@@ -320,39 +713,59 @@ namespace Askart.Windows
         public CreateChatDialog()
         {
             Title = "Создать чат";
-            Width = 400;
-            Height = 300;
+            Width = 400; Height = 320;
+            MinWidth = 350; MinHeight = 280;
+            Icon = new System.Windows.Media.Imaging.BitmapImage(
+                new Uri("pack://application:,,,/Resources/logo.png", UriKind.Absolute));
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
             Background = (Brush)FindResource("BackgroundBrush");
 
             var stackPanel = new StackPanel { Margin = new Thickness(20, 20, 20, 20) };
 
-            var nameLabel = new TextBlock
+            stackPanel.Children.Add(new TextBlock
             {
                 Text = "Название чата",
                 FontFamily = (FontFamily)FindResource("Roboto"),
                 Margin = new Thickness(0, 0, 0, 5)
-            };
+            });
 
             nameTextBox = new TextBox
             {
                 Style = (Style)FindResource("InputTextBoxStyle"),
                 Margin = new Thickness(0, 0, 0, 15)
             };
+            stackPanel.Children.Add(nameTextBox);
 
-            isGroupCheckBox = new CheckBox
+            stackPanel.Children.Add(new TextBlock
             {
-                Content = "Групповой чат",
+                Text = "Тип чата",
                 FontFamily = (FontFamily)FindResource("Roboto"),
                 Margin = new Thickness(0, 0, 0, 10)
-            };
+            });
 
-            isWorkCheckBox = new CheckBox
+            personalRadio = new RadioButton
             {
-                Content = "Рабочий чат (с канбан-доской)",
+                Content = "Личный (2 участника)",
+                FontFamily = (FontFamily)FindResource("Roboto"),
+                Margin = new Thickness(0, 0, 0, 5),
+                IsChecked = true
+            };
+            groupRadio = new RadioButton
+            {
+                Content = "Групповой (от 3 участников)",
+                FontFamily = (FontFamily)FindResource("Roboto"),
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+            workRadio = new RadioButton
+            {
+                Content = "Рабочий (с канбан-доской)",
                 FontFamily = (FontFamily)FindResource("Roboto"),
                 Margin = new Thickness(0, 0, 0, 20)
             };
+
+            stackPanel.Children.Add(personalRadio);
+            stackPanel.Children.Add(groupRadio);
+            stackPanel.Children.Add(workRadio);
 
             var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
 
@@ -371,22 +784,19 @@ namespace Askart.Windows
             var createButton = new Button
             {
                 Content = "Создать",
-                Style = (Style)FindResource("PrimaryButtonStyle"),
+                Style = (Style)FindResource("StandardButtonStyle"),
                 Padding = new Thickness(15, 8, 15, 8)
             };
             createButton.Click += CreateButton_Click;
 
             buttonPanel.Children.Add(cancelButton);
             buttonPanel.Children.Add(createButton);
-
-            stackPanel.Children.Add(nameLabel);
-            stackPanel.Children.Add(nameTextBox);
-            stackPanel.Children.Add(isGroupCheckBox);
-            stackPanel.Children.Add(isWorkCheckBox);
             stackPanel.Children.Add(buttonPanel);
 
             Content = stackPanel;
         }
+
+
 
         private void CreateButton_Click(object sender, RoutedEventArgs e)
         {
@@ -397,9 +807,13 @@ namespace Askart.Windows
             }
 
             ChatName = nameTextBox.Text;
-            IsGroup = isGroupCheckBox.IsChecked == true;
-            IsWorkChat = isWorkCheckBox.IsChecked == true;
+            IsGroup = groupRadio.IsChecked == true || workRadio.IsChecked == true;
+            IsWorkChat = workRadio.IsChecked == true;
             DialogResult = true;
         }
+
+        
     }
+
+
 }

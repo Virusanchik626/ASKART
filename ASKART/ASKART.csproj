@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="DataInitializer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Resources\login_background.png" />
+    <None Remove="Resources\logo.png" />
+    <None Remove="Resources\registr_background.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\login_background.png" />
+    <Resource Include="Resources\logo.png" />
+    <Resource Include="Resources\registr_background.png" />
+  </ItemGroup>
+
+</Project>

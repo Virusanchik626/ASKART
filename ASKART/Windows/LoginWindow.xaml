@@ -7,16 +7,15 @@
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource LoginBackgroundImageBrush}"
         ResizeMode="NoResize"
-        Icon="/Resources/logo.png">
+        Icon="/Resources/logo.png"
+        MinWidth="900" MinHeight="600">
 
     <Grid>
-        <!-- Фон с горами (заглушка) -->
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Декоративный фон -->
         <Rectangle Grid.Row="0" Fill="{StaticResource ActiveBrush}" Opacity="0.1"/>
 
         
@@ -54,7 +53,7 @@
                 <PasswordBox x:Name="PasswordBox" 
                              Style="{StaticResource PasswordBoxStyle}"
                              Margin="0,0,0,15"
-                             Password="123456"/>
+                             Password="12345678"/>
 
                 <!-- Запомнить меня и забыл пароль -->
                 <Grid Margin="0,0,0,20">
@@ -78,7 +77,7 @@
 
                 <!-- Кнопка войти -->
                 <Button Content="Войти" 
-                        Style="{StaticResource PrimaryButtonStyle}"
+                        Style="{StaticResource StandardButtonStyle}"
                         Click="Login_Click"
                         Margin="0,0,0,20"/>
 

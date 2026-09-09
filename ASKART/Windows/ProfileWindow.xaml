@@ -4,9 +4,11 @@
         Title="Профиль - Askart" 
         Height="600" 
         Width="500"
+        MinWidth="400"
+        MinHeight="500"
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource BackgroundBrush}"
-        ResizeMode="NoResize"
+        ResizeMode="CanResize"
         Icon="/Resources/logo.png">
 
     <Grid>
@@ -69,41 +71,12 @@
 
                 <Separator Margin="0,10"/>
 
-                <!-- Настройки -->
-                <TextBlock Text="Настройки" 
-                           FontFamily="{StaticResource Roboto}"
-                           FontSize="16"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource PrimaryTextBrush}"
-                           Margin="0,20,0,15"/>
-
-                <Grid Margin="0,0,0,15">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="Тёмная тема" 
-                               FontFamily="{StaticResource Roboto}"
-                               VerticalAlignment="Center"/>
-                    <ToggleButton x:Name="ThemeToggle" 
-                                  Grid.Column="1"
-                                  Width="50" 
-                                  Height="25"
-                                  Click="ThemeToggle_Click"/>
-                </Grid>
-
-                <Separator Margin="0,10"/>
-
                 <!-- Выход -->
                 <Button Content="Выйти из аккаунта"
+                        Style="{StaticResource StandardButtonStyle}"
                         Background="{StaticResource ErrorBrush}"
-                        Foreground="White"
                         Padding="15,10"
-                        BorderThickness="0"
-                        
-                        FontFamily="{StaticResource Roboto}"
                         Margin="0,20,0,0"
-                        Cursor="Hand"
                         Click="Logout_Click"/>
             </StackPanel>
         </ScrollViewer>

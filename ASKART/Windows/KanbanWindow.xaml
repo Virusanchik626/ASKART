@@ -4,7 +4,9 @@
         Title="Канбан-доска - Askart" 
         Height="700" 
         Width="1200"
-        WindowStartupLocation="CenterScreen"
+        MinWidth="900"
+        MinHeight="600"
+        WindowStartupLocation="CenterOwner"
         Background="{StaticResource BackgroundBrush}"
         Icon="/Resources/logo.png">
 
@@ -18,11 +20,24 @@
         <Border Grid.Row="0" Background="{StaticResource ActiveBrush}" Padding="20">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel>
+                <Button Content="← Назад"
+                        Background="White"
+                        Foreground="{StaticResource ActiveBrush}"
+                        Padding="15,8"
+                        BorderThickness="0"
+                        FontFamily="{StaticResource Roboto}"
+                        FontWeight="SemiBold"
+                        Cursor="Hand"
+                        Click="Back_Click"
+                        Margin="0,0,10,0"/>
+
+                <StackPanel Grid.Column="1">
                     <TextBlock Text="Канбан-доска" 
                                FontFamily="{StaticResource Roboto}"
                                FontSize="24"
@@ -35,93 +50,28 @@
                                Opacity="0.9"/>
                 </StackPanel>
 
-                <Button Grid.Column="1"
+                <Button Grid.Column="2"
                         Content="+ Новая задача"
+                        Style="{StaticResource StandardButtonStyle}"
                         Background="White"
                         Foreground="{StaticResource ActiveBrush}"
                         Padding="15,8"
-                        BorderThickness="0"
-                        
-                        FontFamily="{StaticResource Roboto}"
-                        FontWeight="SemiBold"
-                        Cursor="Hand"
+                        Margin="0,0,10,0"
                         Click="AddTask_Click"/>
+
+                <Button Grid.Column="3"
+                        Content="+ Колонка"
+                        Style="{StaticResource StandardButtonStyle}"
+                        Background="White"
+                        Foreground="{StaticResource ActiveBrush}"
+                        Padding="15,8"
+                        Click="AddColumn_Click"/>
             </Grid>
         </Border>
 
-        <!-- Колонки -->
-        <Grid Grid.Row="1" Margin="20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Новая -->
-            <Border Grid.Column="0" Background="{StaticResource SecondaryBackgroundBrush}" CornerRadius="12" Margin="0,0,10,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Padding="15" Background="{StaticResource InactiveTextBrush}" CornerRadius="12,12,0,0">
-                        <TextBlock Text="Новая" 
-                                   FontFamily="{StaticResource Roboto}"
-                                   FontSize="16"
-                                   FontWeight="Bold"
-                                   Foreground="White"/>
-                    </Border>
-
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="NewTasksPanel" Margin="10"/>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
-
-            <!-- В работе -->
-            <Border Grid.Column="1" Background="{StaticResource SecondaryBackgroundBrush}" CornerRadius="12" Margin="5,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Padding="15" Background="{StaticResource ActiveBrush}" CornerRadius="12,12,0,0">
-                        <TextBlock Text="В работе" 
-                                   FontFamily="{StaticResource Roboto}"
-                                   FontSize="16"
-                                   FontWeight="Bold"
-                                   Foreground="White"/>
-                    </Border>
-
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="InProgressTasksPanel" Margin="10"/>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
-
-            <!-- Выполнена -->
-            <Border Grid.Column="2" Background="{StaticResource SecondaryBackgroundBrush}" CornerRadius="12" Margin="10,0,0,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Padding="15" Background="{StaticResource SuccessBrush}" CornerRadius="12,12,0,0">
-                        <TextBlock Text="Выполнена" 
-                                   FontFamily="{StaticResource Roboto}"
-                                   FontSize="16"
-                                   FontWeight="Bold"
-                                   Foreground="White"/>
-                    </Border>
-
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="CompletedTasksPanel" Margin="10"/>
-                    </ScrollViewer>
-                </Grid>
-            </Border>
-        </Grid>
+        <!-- Горизонтальный скролл для колонок -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Padding="20">
+            <StackPanel x:Name="ColumnsPanel" Orientation="Horizontal" Margin="0,0,0,0"/>
+        </ScrollViewer>
     </Grid>
 </Window>

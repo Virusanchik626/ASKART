@@ -1,5 +1,7 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 
 namespace Askart.Windows
 {
@@ -9,41 +11,43 @@ namespace Askart.Windows
 
         public EmojiPickerWindow()
         {
+            ThemeHelper.Watch(this);
             InitializeComponent();
             LoadEmojis();
         }
 
         private void LoadEmojis()
         {
-            string[] emojis = { "😀", "😃", "", "😁", "😆", "", "🤣", "😂", "🙂", "🙃",
+            string[] emojis = { "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃",
                                "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "😚", "😙",
-                               "🥲", "😋", "😛", "😜", "🤪", "😝", "🤑", "", "🤭", "🤫",
+                               "🥲", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫",
                                "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬",
-                               "👍", "👎", "👊", "✊", "", "🤜", "👏", "🙌", "👐", "",
-                               "❤️", "", "💛", "💚", "", "💜", "🖤", "🤍", "💯", "💔" };
+                               "👍", "👎", "👊", "✊", "🤛", "🤜", "👏", "🙌", "👐", "🤲",
+                               "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "💯", "💔" };
 
-            foreach (var emoji in emojis)
+            foreach (string emoji in emojis)
             {
-                var button = new Button
-                {
-                    Content = emoji,
-                    FontSize = 24,
-                    Width = 50,
-                    Height = 50,
-                    Margin = new Thickness(5, 5, 5, 5),
-                    Background = System.Windows.Media.Brushes.Transparent,
-                    BorderThickness = new Thickness(0, 0, 0, 0),
-                    Cursor = System.Windows.Input.Cursors.Hand
-                };
-
-                button.Click += (s, e) =>
-                {
-                    SelectedEmoji = emoji;
-                    DialogResult = true;
-                };
+                Button button = new Button();
+                button.Content = emoji;
+                button.FontSize = 24;
+                button.Width = 50;
+                button.Height = 50;
+                button.Margin = new Thickness(5);
+                button.Background = Brushes.Transparent;
+                button.BorderThickness = new Thickness(0);
+                button.Cursor = Cursors.Hand;
+                button.Click += EmojiButton_Click;
 
                 EmojiPanel.Children.Add(button);
             }
+        }
+
+        
+        private void EmojiButton_Click(object sender, RoutedEventArgs e)
+        {
+            Button button = sender as Button;
+            SelectedEmoji = button.Content.ToString();
+            DialogResult = true;
         }
 
         private void Close_Click(object sender, RoutedEventArgs e)

@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 
 namespace Askart.Models
 {
@@ -15,29 +15,38 @@ namespace Askart.Models
         public string Email { get; set; }
         public byte[] Avatar { get; set; }
 
-        public string FullName => $"{Surname} {Name} {Lastname}".Trim();
+        
+        public string FullName
+        {
+            get { return (Surname + " " + Name + " " + Lastname).Trim(); }
+        }
 
         public static bool IsValidEmail(string email)
         {
-            if (string.IsNullOrWhiteSpace(email)) return false;
-            try
+            if (string.IsNullOrWhiteSpace(email))
             {
-                var regex = new Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
-                return regex.IsMatch(email);
+                return false;
             }
-            catch { return false; }
+            return Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
         }
 
         public static bool IsValidPhone(string phone)
         {
-            if (string.IsNullOrWhiteSpace(phone)) return false;
-            var regex = new Regex(@"^\+\d{10,15}$");
-            return regex.IsMatch(phone.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", ""));
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                return false;
+            }
+            string clean = phone.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "");
+            return Regex.IsMatch(clean, @"^\+\d{10,15}$");
         }
 
         public static bool IsValidPassword(string password)
         {
-            return !string.IsNullOrWhiteSpace(password) && password.Length >= 8;
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                return false;
+            }
+            return password.Length >= 8;
         }
     }
 }

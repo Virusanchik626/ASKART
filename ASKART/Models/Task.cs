@@ -1,4 +1,5 @@
-﻿namespace Askart.Models
+
+namespace Askart.Models
 {
     public class TaskItem
     {
@@ -16,3 +17,5 @@
         public DateTime CreatedAt { get; set; }
     }
 }
+
+

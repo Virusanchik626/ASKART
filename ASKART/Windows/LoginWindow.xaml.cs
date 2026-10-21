@@ -1,6 +1,5 @@
-﻿using Askart.MockData;
-using Askart;
-using Askart.Windows;
+using Askart.Models;
+using Askart.Services;
 using System.Windows;
 using System.Windows.Input;
 
@@ -10,6 +9,7 @@ namespace Askart.Windows
     {
         public LoginWindow()
         {
+            ThemeHelper.Watch(this);
             InitializeComponent();
         }
 
@@ -25,13 +25,15 @@ namespace Askart.Windows
                 return;
             }
 
-            var user = DataInitializer.Authenticate(email, password);
+            
+            User user = DataService.Login(email, password);
 
             if (user != null)
             {
                 App.CurrentUser = user;
 
-                var mainWindow = new MainWindow();
+                
+                MainWindow mainWindow = new MainWindow();
                 mainWindow.Show();
                 this.Close();
             }
@@ -44,15 +46,18 @@ namespace Askart.Windows
 
         private void Register_Click(object sender, MouseButtonEventArgs e)
         {
-            var registerWindow = new RegisterWindow();
+            RegisterWindow registerWindow = new RegisterWindow();
             registerWindow.Show();
             this.Close();
         }
 
         private void ForgotPassword_Click(object sender, MouseButtonEventArgs e)
         {
-            var forgotWindow = new ForgotPasswordWindow();
-            forgotWindow.Show();
+            
+            
+            ForgotPasswordWindow forgotWindow = new ForgotPasswordWindow();
+            forgotWindow.Owner = this;
+            forgotWindow.ShowDialog();
         }
     }
 }

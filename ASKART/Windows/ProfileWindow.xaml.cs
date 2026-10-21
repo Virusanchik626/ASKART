@@ -1,12 +1,18 @@
-﻿using System.Windows;
+using System.Windows;
 
 namespace Askart.Windows
 {
     public partial class ProfileWindow : Window
     {
+        
+        
+        public bool IsLoggedOut { get; private set; }
+
         public ProfileWindow()
         {
+            ThemeHelper.Watch(this);
             InitializeComponent();
+            IsLoggedOut = false;
             LoadUserData();
         }
 
@@ -22,15 +28,16 @@ namespace Askart.Windows
 
         private void Logout_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show("Вы действительно хотите выйти?", "Выход",
+            MessageBoxResult result = MessageBox.Show("Вы действительно хотите выйти?", "Выход",
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
             {
                 App.CurrentUser = null;
+                IsLoggedOut = true;
 
-                var loginWindow = new LoginWindow();
-                loginWindow.Show();
+                
+                
                 this.Close();
             }
         }

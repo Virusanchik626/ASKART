@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Input;
 
 namespace Askart.Windows
@@ -7,6 +7,7 @@ namespace Askart.Windows
     {
         public ForgotPasswordWindow()
         {
+            ThemeHelper.Watch(this);
             InitializeComponent();
         }
 
@@ -21,14 +22,18 @@ namespace Askart.Windows
                 return;
             }
 
-            MessageBox.Show($"Письмо для восстановления пароля отправлено на {email}",
+            
+            MessageBox.Show("Письмо для восстановления пароля отправлено на " + email,
                 "Успех", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            
+            this.Close();
         }
 
+        
+        
         private void BackToLogin_Click(object sender, MouseButtonEventArgs e)
         {
-            var loginWindow = new LoginWindow();
-            loginWindow.Show();
             this.Close();
         }
     }

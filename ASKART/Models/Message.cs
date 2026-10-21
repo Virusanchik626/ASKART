@@ -1,4 +1,5 @@
-﻿namespace Askart.Models
+
+namespace Askart.Models
 {
     public class Message
     {
@@ -14,3 +15,5 @@
         public Message ReplyTo { get; set; }
     }
 }
+
+

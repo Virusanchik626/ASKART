@@ -19,6 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Resources\login_background.png" />
     <Resource Include="Resources\logo.png" />
     <Resource Include="Resources\registr_background.png" />

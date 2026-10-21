@@ -1,9 +1,12 @@
-﻿using Askart.Models;
+
+using Askart.Models;
 using System.Collections.ObjectModel;
-using System.Linq;
 
 namespace Askart.MockData
 {
+    
+    
+    
     public static class DataInitializer
     {
         public static ObservableCollection<User> Users { get; set; }
@@ -22,7 +25,7 @@ namespace Askart.MockData
                 new User
                 {
                     Id = 1, Surname = "Иванов", Name = "Иван", Lastname = "Иванович",
-                    Login = "test@test.com", Password = "12345678", // 8 символов!
+                    Login = "test@test.com", Password = "12345678", 
                     Email = "test@test.com", Number = "+79991234567",
                     RegistrationDate = DateTime.Now
                 },
@@ -47,7 +50,7 @@ namespace Askart.MockData
         {
             Chats = new ObservableCollection<Chat>
             {
-                // Групповой чат (3 участника) — с правильными ролями
+                
                 new Chat
                 {
                     Id = 1, Name = "Общий чат",
@@ -65,7 +68,8 @@ namespace Askart.MockData
                         new Message
                         {
                             Id = 1, Text = "Всем привет!", ChatId = 1, SenderId = 1,
-                            SendTime = DateTime.Now.AddHours(-5), SenderName = "Иванов Иван"
+                            SendTime = DateTime.Now.AddHours(-5), SenderName = "Иванов Иван",
+                            IsPinned = true 
                         },
                         new Message
                         {
@@ -75,7 +79,7 @@ namespace Askart.MockData
                         }
                     }
                 },
-                // Рабочий чат с задачами
+                
                 new Chat
                 {
                     Id = 2, Name = "Рабочая группа",
@@ -122,7 +126,7 @@ namespace Askart.MockData
                         }
                     }
                 },
-                // Личный чат (2 участника)
+                
                 new Chat
                 {
                     Id = 3, Name = "Личка с Петровым",
@@ -150,37 +154,6 @@ namespace Askart.MockData
                     }
                 }
             };
-        }
-
-        public static User Authenticate(string login, string password)
-        {
-            return Users.FirstOrDefault(u => u.Login == login && u.Password == password);
-        }
-
-        public static bool RegisterUser(string name, string surname, string email, string password, string phone)
-        {
-            if (!User.IsValidEmail(email))
-                return false;
-            if (!User.IsValidPassword(password))
-                return false;
-            if (Users.Any(u => u.Login == email || u.Email == email))
-                return false;
-
-            var newUser = new User
-            {
-                Id = Users.Count > 0 ? Users.Max(u => u.Id) + 1 : 1,
-                Name = name,
-                Surname = surname,
-                Lastname = "",
-                Login = email,
-                Password = password,
-                Email = email,
-                Number = phone ?? "",
-                RegistrationDate = DateTime.Now
-            };
-
-            Users.Add(newUser);
-            return true;
         }
     }
 }

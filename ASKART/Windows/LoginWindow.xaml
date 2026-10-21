@@ -1,4 +1,5 @@
-﻿<Window x:Class="Askart.Windows.LoginWindow"
+
+<Window x:Class="Askart.Windows.LoginWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Авторизация - Askart" 
@@ -16,13 +17,12 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Rectangle Grid.Row="0" Fill="{StaticResource ActiveBrush}" Opacity="0.1"/>
+        <Rectangle Grid.Row="0" Fill="{DynamicResource ActiveBrush}" Opacity="0.1"/>
 
         
 
-        <!-- Карточка авторизации -->
         <Border Grid.Row="0" 
-                Background="{StaticResource CardBackgroundBrush}"
+                Background="{DynamicResource CardBackgroundBrush}"
                 CornerRadius="20" 
                 Padding="40" 
                 Width="400" 
@@ -31,13 +31,11 @@
                 HorizontalAlignment="Center">
 
             <StackPanel>
-                <!-- Заголовок -->
                 <TextBlock Text="Авторизация" 
                            Style="{StaticResource TitleTextStyle}"
                            HorizontalAlignment="Center"
                            Margin="0,0,0,30"/>
 
-                <!-- Поле почты -->
                 <TextBlock Text="почта" 
                            Style="{StaticResource SecondaryTextStyle}"
                            Margin="0,0,0,5"/>
@@ -46,7 +44,6 @@
                          Margin="0,0,0,20"
                          Text="test@test.com"/>
 
-                <!-- Поле пароля -->
                 <TextBlock Text="пароль" 
                            Style="{StaticResource SecondaryTextStyle}"
                            Margin="0,0,0,5"/>
@@ -55,7 +52,6 @@
                              Margin="0,0,0,15"
                              Password="12345678"/>
 
-                <!-- Запомнить меня и забыл пароль -->
                 <Grid Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -75,13 +71,11 @@
                                VerticalAlignment="Center"/>
                 </Grid>
 
-                <!-- Кнопка войти -->
                 <Button Content="Войти" 
                         Style="{StaticResource StandardButtonStyle}"
                         Click="Login_Click"
                         Margin="0,0,0,20"/>
 
-                <!-- Регистрация -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <TextBlock Text="Ещё нет аккаунта? " 
                                Style="{StaticResource SecondaryTextStyle}"/>
@@ -93,3 +87,5 @@
         </Border>
     </Grid>
 </Window>
+
+

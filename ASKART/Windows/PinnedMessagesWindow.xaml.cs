@@ -1,4 +1,5 @@
-﻿using Askart.Models;
+using Askart.Models;
+using Askart.Services;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -12,6 +13,7 @@ namespace Askart.Windows
 
         public PinnedMessagesWindow(Chat chat)
         {
+            ThemeHelper.Watch(this);
             InitializeComponent();
             this.chat = chat;
             ChatNameText.Text = chat.Name;
@@ -22,24 +24,18 @@ namespace Askart.Windows
         {
             PinnedPanel.Children.Clear();
 
-            var pinnedMessages = chat.Messages.Where(m => m.IsPinned).OrderByDescending(m => m.SendTime).ToList();
+            List<Message> pinnedMessages = DataService.GetPinnedMessages(chat);
 
             if (pinnedMessages.Count == 0)
             {
-                var emptyText = new TextBlock
-                {
-                    Text = "В этом чате пока нет закреплённых сообщений",
-                    FontFamily = (FontFamily)FindResource("Roboto"),
-                    FontSize = 14,
-                    Foreground = (Brush)FindResource("SecondaryTextBrush"),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(0, 30, 0, 0)
-                };
+                TextBlock emptyText = UiHelper.MakeText("В этом чате пока нет закреплённых сообщений", 14, "SecondaryTextBrush");
+                emptyText.HorizontalAlignment = HorizontalAlignment.Center;
+                emptyText.Margin = new Thickness(0, 30, 0, 0);
                 PinnedPanel.Children.Add(emptyText);
                 return;
             }
 
-            foreach (var message in pinnedMessages)
+            foreach (Message message in pinnedMessages)
             {
                 PinnedPanel.Children.Add(CreatePinnedCard(message));
             }
@@ -47,93 +43,61 @@ namespace Askart.Windows
 
         private Border CreatePinnedCard(Message message)
         {
-            var border = new Border
-            {
-                Background = (Brush)FindResource("CardBackgroundBrush"),
-                CornerRadius = new CornerRadius(12),
-                Padding = new Thickness(15, 15, 15, 15),
-                Margin = new Thickness(0, 0, 0, 10),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7)),
-                BorderThickness = new Thickness(3, 3, 3, 3),
-                Effect = new DropShadowEffect
-                {
-                    Color = Colors.Black,
-                    BlurRadius = 10,
-                    ShadowDepth = 2,
-                    Opacity = 0.15
-                }
-            };
+            Border border = new Border();
+            border.SetResourceReference(Border.BackgroundProperty, "CardBackgroundBrush");
+            border.CornerRadius = new CornerRadius(12);
+            border.Padding = new Thickness(15);
+            border.Margin = new Thickness(0, 0, 0, 10);
+            border.BorderBrush = new SolidColorBrush(Color.FromRgb(255, 193, 7));
+            border.BorderThickness = new Thickness(3);
 
-            var stackPanel = new StackPanel();
+            DropShadowEffect shadow = new DropShadowEffect();
+            shadow.Color = Colors.Black;
+            shadow.BlurRadius = 10;
+            shadow.ShadowDepth = 2;
+            shadow.Opacity = 0.15;
+            border.Effect = shadow;
 
-            // Заголовок: автор + дата
-            var headerGrid = new Grid();
+            StackPanel stackPanel = new StackPanel();
+
+            Grid headerGrid = new Grid();
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            var authorText = new TextBlock
-            {
-                Text = "📌 " + message.SenderName,
-                FontFamily = (FontFamily)FindResource("Roboto"),
-                FontWeight = FontWeights.SemiBold,
-                FontSize = 13,
-                Foreground = (Brush)FindResource("PrimaryTextBrush"),
-                VerticalAlignment = VerticalAlignment.Center
-            };
+            TextBlock authorText = UiHelper.MakeText("📌 " + message.SenderName, 13, "PrimaryTextBrush");
+            authorText.FontWeight = FontWeights.SemiBold;
+            authorText.VerticalAlignment = VerticalAlignment.Center;
             Grid.SetColumn(authorText, 0);
 
-            var dateText = new TextBlock
-            {
-                Text = message.SendTime.ToString("dd.MM.yyyy HH:mm"),
-                FontFamily = (FontFamily)FindResource("Roboto"),
-                FontSize = 11,
-                Foreground = (Brush)FindResource("InactiveTextBrush"),
-                VerticalAlignment = VerticalAlignment.Center
-            };
+            TextBlock dateText = UiHelper.MakeText(message.SendTime.ToString("dd.MM.yyyy HH:mm"), 11, "InactiveTextBrush");
+            dateText.VerticalAlignment = VerticalAlignment.Center;
             Grid.SetColumn(dateText, 1);
 
             headerGrid.Children.Add(authorText);
             headerGrid.Children.Add(dateText);
             stackPanel.Children.Add(headerGrid);
 
-            // Разделитель
-            var separator = new Border
-            {
-                Height = 1,
-                Background = new SolidColorBrush(Color.FromRgb(224, 224, 224)),
-                Margin = new Thickness(0, 10, 0, 10)
-            };
+            Border separator = new Border();
+            separator.Height = 1;
+            separator.SetResourceReference(Border.BackgroundProperty, "LineBrush");
+            separator.Margin = new Thickness(0, 10, 0, 10);
             stackPanel.Children.Add(separator);
 
-            // Текст сообщения
-            var messageText = new TextBlock
-            {
-                Text = message.Text,
-                FontFamily = (FontFamily)FindResource("Roboto"),
-                FontSize = 14,
-                Foreground = (Brush)FindResource("PrimaryTextBrush"),
-                TextWrapping = TextWrapping.Wrap
-            };
+            TextBlock messageText = UiHelper.MakeText(message.Text, 14, "PrimaryTextBrush");
+            messageText.TextWrapping = TextWrapping.Wrap;
             stackPanel.Children.Add(messageText);
 
-            // Индикатор редактирования
             if (message.EditTime.HasValue)
             {
-                var editIndicator = new TextBlock
-                {
-                    Text = $"✏️ Отредактировано: {message.EditTime.Value:dd.MM.yyyy HH:mm}",
-                    FontFamily = (FontFamily)FindResource("Roboto"),
-                    FontSize = 11,
-                    FontStyle = FontStyles.Italic,
-                    Foreground = (Brush)FindResource("InactiveTextBrush"),
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Margin = new Thickness(0, 5, 0, 0)
-                };
+                string editedText = "Отредактировано: " + message.EditTime.Value.ToString("dd.MM.yyyy HH:mm");
+                TextBlock editIndicator = UiHelper.MakeText(editedText, 11, "InactiveTextBrush");
+                editIndicator.FontStyle = FontStyles.Italic;
+                editIndicator.HorizontalAlignment = HorizontalAlignment.Right;
+                editIndicator.Margin = new Thickness(0, 5, 0, 0);
                 stackPanel.Children.Add(editIndicator);
             }
 
             border.Child = stackPanel;
-
             return border;
         }
 

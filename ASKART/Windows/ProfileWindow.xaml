@@ -1,4 +1,5 @@
-﻿<Window x:Class="Askart.Windows.ProfileWindow"
+
+<Window x:Class="Askart.Windows.ProfileWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Профиль - Askart" 
@@ -7,7 +8,7 @@
         MinWidth="400"
         MinHeight="500"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource BackgroundBrush}"
+        Background="{DynamicResource BackgroundBrush}"
         ResizeMode="CanResize"
         Icon="/Resources/logo.png">
 
@@ -18,8 +19,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Заголовок -->
-        <Border Grid.Row="0" Background="{StaticResource ActiveBrush}" Padding="20">
+        <Border Grid.Row="0" Background="{DynamicResource ActiveBrush}" Padding="20">
             <TextBlock Text="Профиль и настройки" 
                        FontFamily="{StaticResource Roboto}"
                        FontSize="20"
@@ -27,19 +27,16 @@
                        Foreground="White"/>
         </Border>
 
-        <!-- Контент -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="20">
-                <!-- Аватар -->
-                <Ellipse Width="100" Height="100" Fill="{StaticResource ActiveBrush}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <Ellipse Width="100" Height="100" Fill="{DynamicResource ActiveBrush}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
                 <TextBlock Text="👤" FontSize="48" HorizontalAlignment="Center" Margin="0,-90,0,0"/>
 
-                <!-- Информация -->
                 <TextBlock Text="Информация" 
                            FontFamily="{StaticResource Roboto}"
                            FontSize="16"
                            FontWeight="SemiBold"
-                           Foreground="{StaticResource PrimaryTextBrush}"
+                           Foreground="{DynamicResource PrimaryTextBrush}"
                            Margin="0,0,0,15"/>
 
                 <Grid Margin="0,0,0,15">
@@ -74,7 +71,7 @@
                 <!-- Выход -->
                 <Button Content="Выйти из аккаунта"
                         Style="{StaticResource StandardButtonStyle}"
-                        Background="{StaticResource ErrorBrush}"
+                        Background="{DynamicResource ErrorBrush}"
                         Padding="15,10"
                         Margin="0,20,0,0"
                         Click="Logout_Click"/>
@@ -82,3 +79,5 @@
         </ScrollViewer>
     </Grid>
 </Window>
+
+

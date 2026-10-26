@@ -1,0 +1,337 @@
+
+<Window x:Class="Askart.Windows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Askart - Мессенджер" 
+        Height="700" 
+        Width="1200"
+        MinWidth="900"
+        MinHeight="600"
+        Icon="/Resources/logo.png"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BackgroundBrush}">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="350"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="{DynamicResource SecondaryBackgroundBrush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="{DynamicResource ActiveBrush}" Padding="20">
+                    <Grid>
+                        <TextBlock Text="Askart" 
+                                   FontFamily="{StaticResource Roboto}"
+                                   FontSize="24"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   VerticalAlignment="Center"/>
+                        <Button Content="+" 
+                                Width="35" 
+                                Height="35"
+                                FontSize="20"
+                                FontWeight="Bold"
+                                Background="White"
+                                Foreground="{DynamicResource ActiveBrush}"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                Click="CreateChat_Click"
+                                HorizontalAlignment="Right"/>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}" Padding="10" Margin="10,10,10,5">
+                    <TextBox x:Name="SearchTextBox"
+                             Style="{StaticResource InputTextBoxStyle}"
+                             Height="40"
+                             TextChanged="Search_TextChanged"/>
+                </Border>
+
+                <Border Grid.Row="2" Padding="10,0,10,5">
+                    <CheckBox x:Name="ShowArchivedCheckBox" 
+                              Content="Показать архивные чаты"
+                              FontFamily="{StaticResource Roboto}"
+                              FontSize="12"
+                              Foreground="{DynamicResource SecondaryTextBrush}"
+                              Checked="FilterChanged"
+                              Unchecked="FilterChanged"/>
+                </Border>
+
+                <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="ChatListPanel"/>
+                </ScrollViewer>
+
+                <Border Grid.Row="4" Background="{DynamicResource CardBackgroundBrush}" Padding="15">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Ellipse Width="45" Height="45" Fill="{DynamicResource ActiveBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="" FontSize="24" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                        <StackPanel Grid.Column="1" Margin="15,0,0,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="UserNameText" 
+                                       FontFamily="{StaticResource Roboto}"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        </StackPanel>
+
+                        <Button Content="⚙" 
+                                Width="35" Height="35" FontSize="16"
+                                Background="Transparent" BorderThickness="0"
+                                HorizontalAlignment="Right" Cursor="Hand"
+                                Click="Profile_Click" Grid.Column="1"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Правая панель -->
+        <Grid Grid.Column="1" x:Name="ChatArea">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Заголовок чата -->
+            <Border x:Name="ChatHeader"
+                    Grid.Row="0" 
+                    Background="{DynamicResource CardBackgroundBrush}" 
+                    Padding="20" 
+                    BorderBrush="{DynamicResource LineBrush}" 
+                    BorderThickness="0,0,0,1" 
+                    Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel>
+                        <TextBlock x:Name="ChatNameText" 
+                                   FontFamily="{StaticResource Roboto}"
+                                   FontSize="18"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        <TextBlock x:Name="ChatTypeText" 
+                                   FontFamily="{StaticResource Roboto}"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                    </StackPanel>
+
+                    <Button x:Name="MembersButton"
+                            Grid.Column="1"
+                            Content="👥 Участники"
+                            Style="{StaticResource StandardButtonStyle}"
+                            Padding="12,8"
+                            Margin="5,0,0,0"
+                            Click="Members_Click"/>
+
+                    <Button x:Name="PinnedButton"
+                            Grid.Column="2"
+                            Content="📌 Закреплённые"
+                            Style="{StaticResource StandardButtonStyle}"
+                            Padding="12,8"
+                            Margin="5,0,0,0"
+                            Click="Pinned_Click"
+                            Visibility="Collapsed"/>
+
+                    <Button x:Name="StatsButton"
+                            Grid.Column="3"
+                            Content="📊 Статистика"
+                            Style="{StaticResource StandardButtonStyle}"
+                            Padding="12,8"
+                            Margin="5,0,0,0"
+                            Click="Stats_Click"
+                            Visibility="Collapsed"/>
+
+                    <Button x:Name="ArchiveButton"
+                            Grid.Column="4"
+                            Content="📦 Архивировать"
+                            Style="{StaticResource StandardButtonStyle}"
+                            Padding="12,8"
+                            Margin="5,0,0,0"
+                            Click="Archive_Click"
+                            Visibility="Collapsed"/>
+
+                    <Button x:Name="KanbanButton"
+                            Grid.Column="5"
+                            Content=" Канбан"
+                            Style="{StaticResource StandardButtonStyle}"
+                            Padding="12,8"
+                            Margin="5,0,0,0"
+                            Click="Kanban_Click"
+                            Visibility="Collapsed"/>
+                </Grid>
+            </Border>
+
+            <!-- Панель закреплённых сообщений -->
+            <Border x:Name="PinnedBar"
+                    Grid.Row="1"
+                    Background="{DynamicResource PinnedBarBackgroundBrush}"
+                    Padding="15,10,15,10"
+                    BorderBrush="#FFC107"
+                    BorderThickness="0,0,0,1"
+                    Cursor="Hand"
+                    MouseLeftButtonDown="PinnedBar_Click"
+                    Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="📌" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                    <TextBlock x:Name="PinnedBarText"
+                               Grid.Column="1"
+                               FontFamily="{StaticResource Roboto}"
+                               FontSize="12"
+                               Foreground="{DynamicResource PinnedBarTextBrush}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+
+                    <TextBlock Grid.Column="2"
+                               Text="Открыть все →"
+                               FontFamily="{StaticResource Roboto}"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource PinnedBarTextBrush}"
+                               VerticalAlignment="Center"
+                               Margin="10,0,0,0"/>
+                </Grid>
+            </Border>
+
+            <!-- Сообщения -->
+            <ScrollViewer x:Name="MessagesScroll" 
+                          Grid.Row="2" 
+                          VerticalScrollBarVisibility="Auto"
+                          Padding="20"
+                          Visibility="Collapsed">
+                <StackPanel x:Name="MessagesPanel"/>
+            </ScrollViewer>
+
+            <!-- Панель ответа -->
+            <Border x:Name="ReplyPanel"
+                    Grid.Row="3"
+                    Background="{DynamicResource SecondaryBackgroundBrush}"
+                    Padding="15,10,15,10"
+                    BorderBrush="{DynamicResource ActiveBrush}"
+                    BorderThickness="0,1,0,0"
+                    Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Text="↩" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"
+                               Foreground="{DynamicResource ActiveBrush}"/>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock x:Name="ReplyAuthorText"
+                                   FontFamily="{StaticResource Roboto}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ActiveBrush}"/>
+                        <TextBlock x:Name="ReplyPreviewText"
+                                   FontFamily="{StaticResource Roboto}"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="400"/>
+                    </StackPanel>
+
+                    <Button Grid.Column="2"
+                            Content="✕"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            FontSize="16"
+                            Foreground="{DynamicResource SecondaryTextBrush}"
+                            Cursor="Hand"
+                            Click="CancelReply_Click"
+                            Padding="5"/>
+                </Grid>
+            </Border>
+
+            <!-- Поле ввода -->
+            <Border x:Name="InputArea"
+                    Grid.Row="4"
+                    Background="{DynamicResource CardBackgroundBrush}" 
+                    Padding="20" 
+                    BorderBrush="{DynamicResource LineBrush}" 
+                    BorderThickness="0,1,0,0" 
+                    Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="MessageTextBox"
+                             Style="{StaticResource InputTextBoxStyle}"
+                             Height="50"
+                             TextWrapping="Wrap"
+                             AcceptsReturn="True"
+                             MaxHeight="100"
+                             KeyDown="MessageTextBox_KeyDown"/>
+
+                    <Button Grid.Column="1"
+                            Content="😊"
+                            FontSize="20"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Cursor="Hand"
+                            Margin="10,0,0,0"
+                            Click="Emoji_Click"/>
+
+                    <Button Grid.Column="2"
+                            Content="Отправить"
+                            Style="{StaticResource StandardButtonStyle}"
+                            Padding="25,12"
+                            Margin="10,0,0,0"
+                            Click="Send_Click"/>
+                </Grid>
+            </Border>
+
+            <!-- Приветствие -->
+            <StackPanel x:Name="WelcomePanel" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="Добро пожаловать в Askart!" 
+                           FontFamily="{StaticResource Roboto}"
+                           FontSize="32"
+                           FontWeight="Bold"
+                           Foreground="{DynamicResource PrimaryTextBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,15"/>
+                <TextBlock Text="Выберите чат слева или создайте новый" 
+                           FontFamily="{StaticResource Roboto}"
+                           FontSize="16"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
+
+

@@ -1,3 +1,15 @@
-# ASKART
+# ASKART — ветка Backend
 
-Ссылка на фигму: https://www.figma.com/design/p2o391S8R6sbY3Z3iAMrEx/ASKART?node-id=0-1&t=VyHZBgP0jgwvzxtl-1
+## Возможности приложения
+
+- регистрация и вход;
+- личные и групповые чаты, список участников;
+- сообщения с ответами, редактированием, удалением и закреплением;
+- профиль пользователя и список участников;
+- задачи и доска Kanban;
+- окно статистики чата, выбор эмодзи и окно восстановления пароля.
+
+## Связанные материалы
+
+- [Макет в Figma](https://www.figma.com/design/p2o391S8R6sbY3Z3iAMrEx/ASKART?node-id=0-1&t=VyHZBgP0jgwvzxtl-1)
+- [Исходники API в ветке main](https://github.com/Virusanchik626/ASKART/tree/main)

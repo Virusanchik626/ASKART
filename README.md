@@ -13,3 +13,4 @@
 
 - [Макет ASKART в Figma](https://www.figma.com/design/p2o391S8R6sbY3Z3iAMrEx/ASKART?node-id=0-1&t=VyHZBgP0jgwvzxtl-1)
 - [Репозиторий ASKART](https://github.com/Virusanchik626/ASKART)
+- [Канбан](https://ru.yougile.com/team/72028b9b085a/ASKART#ASK-3)

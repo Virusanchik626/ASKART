@@ -1,6 +1,0 @@
-@ASKART.API_HostAddress = http://localhost:5025
-
-GET {{ASKART.API_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

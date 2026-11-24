@@ -1,0 +1,78 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="Askart.Windows.AdminChatDetailsWindow" Title="{Binding Chat.Name}" Width="900" Height="720" MinWidth="600" MinHeight="560" Icon="/Resources/logo.png" WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Resources/AdminStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid Margin="25">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Grid Margin="0,0,0,15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{Binding Chat.Name}" Style="{StaticResource AdminText}" FontSize="20" FontWeight="Bold" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Metadata}" Style="{StaticResource AdminSecondary}" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Button Grid.Column="1" Content="🗑 Удалить чат" Command="{Binding DeleteChat}" Style="{StaticResource AdminDanger}" Margin="15,0,0,0" VerticalAlignment="Center"/>
+        </Grid>
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="{Binding Note}" Style="{StaticResource AdminInactive}" Margin="0,0,0,10"/>
+            <TextBlock Text="{Binding Status}" Style="{StaticResource AdminStatus}"/>
+            <Button Content="Повторить" Command="{Binding Refresh}" Style="{StaticResource AdminMainButton}" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+        </StackPanel>
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Messages}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{DynamicResource CardBackgroundBrush}" CornerRadius="12" Padding="12" Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding SenderName}" Style="{StaticResource AdminText}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding SendTime, StringFormat=dd.MM.yyyy HH:mm}" Style="{StaticResource AdminSecondary}" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="изменено" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource AdminInactive}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding EditTime}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding ReplyId, StringFormat='↩ ответ на сообщение #{0}'}" FontFamily="{DynamicResource Roboto}" FontSize="11" Foreground="{DynamicResource InactiveTextBrush}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding ReplyId}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Text}" Style="{StaticResource AdminText}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="🗑" FontSize="16" ToolTip="Удалить сообщение" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="4,0,4,0" VerticalAlignment="Top" Margin="10,0,0,0" Command="{Binding DataContext.DeleteMessage, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</Window>

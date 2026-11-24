@@ -1,0 +1,11 @@
+<Window x:Class="Askart.Windows.CreateChatDialog" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Icon="/Resources/logo.png" WindowStartupLocation="CenterOwner" Background="{DynamicResource BackgroundBrush}" Title="Создать чат" Width="400" Height="320" MinWidth="350" MinHeight="280">
+ <StackPanel Margin="20">
+  <TextBlock Text="Название чата (для личного: логин или почта собеседника)" FontFamily="{DynamicResource Roboto}" FontSize="13" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,5"/>
+  <TextBox x:Name="nameTextBox" MaxLength="50" Style="{StaticResource InputTextBoxStyle}" Margin="0,0,0,15"/>
+  <TextBlock Text="Тип чата" FontFamily="{DynamicResource Roboto}" FontSize="13" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,10"/>
+  <RadioButton x:Name="personalRadio" Content="Личный (2 участника)" FontFamily="{DynamicResource Roboto}" Margin="0,0,0,5" IsChecked="True"/>
+  <RadioButton x:Name="groupRadio" Content="Групповой (от 3 участников)" FontFamily="{DynamicResource Roboto}" Margin="0,0,0,5"/>
+  <RadioButton x:Name="workRadio" Content="Рабочий (с канбан-доской)" FontFamily="{DynamicResource Roboto}" Margin="0,0,0,20"/>
+  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="Отмена" Padding="15,8,15,8" Margin="0,0,10,0" Background="Transparent" BorderThickness="1" Cursor="Hand" BorderBrush="{DynamicResource SecondaryTextBrush}" Foreground="{DynamicResource PrimaryTextBrush}" Click="Cancel_Click"/><Button Content="Создать" Style="{StaticResource StandardButtonStyle}" Padding="15,8,15,8" Click="CreateButton_Click"/></StackPanel>
+ </StackPanel>
+</Window>

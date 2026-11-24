@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ASKART.API/Dockerfile
+    ports:
+      - "5025:8080"
+      - "7103:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # 👇 ЭТА СТРОКА ПРИНУДИТЕЛЬНО ЗАДАЁТ ПРАВИЛЬНОЕ ПОДКЛЮЧЕНИЕ ДЛЯ DOCKER
+      - ConnectionStrings__DefaultConnection=Server=db;Port=3306;Database=askart;User=root;Password=1234;SslMode=None;AllowPublicKeyRetrieval=True;
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - askart-network
+
+  db:
+    image: mysql:8.0
+    container_name: askart-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: askart
+    ports:
+      - "3307:3306"
+    volumes:
+      - askart_data:/var/lib/mysql
+    networks:
+      - askart-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p1234"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  askart_data:
+
+networks:
+  askart-network:
+    driver: bridge

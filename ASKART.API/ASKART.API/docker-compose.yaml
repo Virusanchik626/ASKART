@@ -1,0 +1,32 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: askart_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: askart
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+  api:
+    build:
+      context: .
+      dockerfile: ASKART.API/Dockerfile
+    container_name: askart_api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=db;Port=3306;Database=askart;User=root;Password=1234;
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DB_HOST=db
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:
+
+networks:
+  askart_network:

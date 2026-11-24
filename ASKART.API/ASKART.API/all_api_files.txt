@@ -1,0 +1,2223 @@
+================================================================================
+АНАЛИЗ ФАЙЛОВ ПРОЕКТА
+Директория: C:\ASKART.API\ASKART.API
+Найдено файлов: 27
+================================================================================
+
+
+================================================================================
+ФАЙЛ: Controllers\ChatMembersController.cs
+================================================================================
+
+﻿using ASKART.API.Data;
+using ASKART.API.DTOs;
+using ASKART.API.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace ASKART.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ChatMembersController : ControllerBase
+{
+    private readonly AskartContext _context;
+
+    public ChatMembersController(AskartContext context)
+    {
+        _context = context;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddMember(AddChatMemberDto dto)
+    {
+        var chatExists = await _context.Chats
+            .AnyAsync(c => c.IdChat == dto.ChatId);
+
+        if (!chatExists)
+        {
+            return NotFound(new
+            {
+                message = "Чат не найден."
+            });
+        }
+
+        var userExists = await _context.Users
+            .AnyAsync(u => u.IdUser == dto.UserId);
+
+        if (!userExists)
+        {
+            return NotFound(new
+            {
+                message = "Пользователь не найден."
+            });
+        }
+
+        var memberExists = await _context.Chatmembers
+            .AnyAsync(cm =>
+                cm.ChatId == dto.ChatId &&
+                cm.UserId == dto.UserId);
+
+        if (memberExists)
+        {
+            return BadRequest(new
+            {
+                message = "Пользователь уже состоит в этом чате."
+            });
+        }
+
+        var chatMember = new Chatmember
+        {
+            ChatId = dto.ChatId,
+            UserId = dto.UserId,
+            Role = dto.Role
+        };
+
+        _context.Chatmembers.Add(chatMember);
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Пользователь добавлен в чат.",
+            chatId = chatMember.ChatId,
+            userId = chatMember.UserId,
+            role = chatMember.Role
+        });
+    }
+
+
+    [HttpGet("{chatId}")]
+    public async Task<IActionResult> GetMembers(int chatId)
+    {
+        var chatExists = await _context.Chats
+            .AnyAsync(c => c.IdChat == chatId);
+
+        if (!chatExists)
+        {
+            return NotFound(new
+            {
+                message = "Чат не найден."
+            });
+        }
+
+        var members = await _context.Chatmembers
+            .Where(cm => cm.ChatId == chatId)
+            .Include(cm => cm.User)
+            .Select(cm => new
+            {
+                userId = cm.UserId,
+                surname = cm.User.Surname,
+                name = cm.User.Name,
+                lastname = cm.User.Lastname,
+                login = cm.User.Login,
+                role = cm.Role
+            })
+            .ToListAsync();
+
+        return Ok(members);
+    }
+
+
+    [HttpDelete("{chatId}/{userId}")]
+    public async Task<IActionResult> RemoveMember(int chatId, int userId)
+    {
+        var member = await _context.Chatmembers
+            .FirstOrDefaultAsync(cm =>
+                cm.ChatId == chatId &&
+                cm.UserId == userId);
+
+        if (member == null)
+        {
+            return NotFound(new
+            {
+                message = "Пользователь не состоит в этом чате."
+            });
+        }
+
+        _context.Chatmembers.Remove(member);
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Пользователь удалён из чата."
+        });
+    }
+}
+
+
+
+================================================================================
+ФАЙЛ: Controllers\ChatsController.cs
+================================================================================
+
+﻿using ASKART.API.Data;
+using ASKART.API.DTOs;
+using ASKART.API.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace ASKART.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ChatsController : ControllerBase
+{
+    private readonly AskartContext _context;
+
+    public ChatsController(AskartContext context)
+    {
+        _context = context;
+    }
+
+    [HttpPost("private")]
+    public async Task<IActionResult> CreatePrivateChat(CreatePrivateChatDto dto)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.IdUser == dto.UserId);
+
+        if (user == null)
+        {
+            return NotFound(new
+            {
+                message = "Пользователь не найден."
+            });
+        }
+
+        var otherUser = await _context.Users
+            .FirstOrDefaultAsync(u => u.IdUser == dto.OtherUserId);
+
+        if (otherUser == null)
+        {
+            return NotFound(new
+            {
+                message = "Второй пользователь не найден."
+            });
+        }
+
+        if (dto.UserId == dto.OtherUserId)
+        {
+            return BadRequest(new
+            {
+                message = "Нельзя создать личный чат с самим собой."
+            });
+        }
+
+        var existingChatId = await _context.Chats
+    .Where(c => c.TypeChat == "Личный")
+    .Where(c => _context.Chatmembers.Any(cm =>
+        cm.ChatId == c.IdChat &&
+        cm.UserId == dto.UserId))
+    .Where(c => _context.Chatmembers.Any(cm =>
+        cm.ChatId == c.IdChat &&
+        cm.UserId == dto.OtherUserId))
+    .Select(c => (int?)c.IdChat)
+    .FirstOrDefaultAsync();
+
+        if (existingChatId != null)
+        {
+            return Ok(new
+            {
+                message = "Личный чат уже существует.",
+                chatId = existingChatId
+            });
+        }
+
+        var lastId = await _context.Chats
+            .Select(c => (int?)c.IdChat)
+            .MaxAsync() ?? 0;
+
+        var chat = new Chat
+        {
+            IdChat = lastId + 1,
+            Name = $"{otherUser.Surname} {otherUser.Name}",
+            TypeChat = "Личный",
+            TypeGroup = null,
+            UserId = dto.UserId
+        };
+
+        _context.Chats.Add(chat);
+
+        var firstMember = new Chatmember
+        {
+            ChatId = chat.IdChat,
+            UserId = dto.UserId,
+            Role = "Участник"
+        };
+
+        var secondMember = new Chatmember
+        {
+            ChatId = chat.IdChat,
+            UserId = dto.OtherUserId,
+            Role = "Участник"
+        };
+
+        _context.Chatmembers.Add(firstMember);
+        _context.Chatmembers.Add(secondMember);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Личный чат создан.",
+            chatId = chat.IdChat,
+            name = chat.Name,
+            typeChat = chat.TypeChat,
+            members = new[]
+            {
+                new
+                {
+                    userId = firstMember.UserId,
+                    role = firstMember.Role
+                },
+                new
+                {
+                    userId = secondMember.UserId,
+                    role = secondMember.Role
+                }
+            }
+        });
+    }
+
+
+    [HttpPost("group")]
+    public async Task<IActionResult> CreateGroup(CreateGroupChatDto dto)
+    {
+        var creatorExists = await _context.Users
+            .AnyAsync(u => u.IdUser == dto.CreatorId);
+
+        if (!creatorExists)
+        {
+            return NotFound(new
+            {
+                message = "Пользователь-создатель не найден."
+            });
+        }
+
+        if (dto.TypeGroup != "Личная" && dto.TypeGroup != "Рабочая")
+        {
+            return BadRequest(new
+            {
+                message = "Тип группы должен быть 'Личная' или 'Рабочая'."
+            });
+        }
+
+        var lastId = await _context.Chats
+            .Select(c => (int?)c.IdChat)
+            .MaxAsync() ?? 0;
+
+        var chat = new Chat
+        {
+            IdChat = lastId + 1,
+            Name = dto.Name,
+            TypeChat = "Группа",
+            TypeGroup = dto.TypeGroup,
+            UserId = dto.CreatorId
+        };
+
+        _context.Chats.Add(chat);
+
+        var creatorMember = new Chatmember
+        {
+            ChatId = chat.IdChat,
+            UserId = dto.CreatorId,
+            Role = "Владелец"
+        };
+
+        _context.Chatmembers.Add(creatorMember);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Группа создана.",
+            chatId = chat.IdChat,
+            name = chat.Name,
+            typeChat = chat.TypeChat,
+            typeGroup = chat.TypeGroup,
+            creator = new
+            {
+                userId = creatorMember.UserId,
+                role = creatorMember.Role
+            }
+        });
+    }
+    [HttpGet("user/{userId}")]
+    public async Task<IActionResult> GetUserChats(int userId)
+    {
+        var userExists = await _context.Users
+            .AnyAsync(u => u.IdUser == userId);
+
+        if (!userExists)
+        {
+            return NotFound(new
+            {
+                message = "Пользователь не найден."
+            });
+        }
+
+        var memberships = await _context.Chatmembers
+            .Where(cm => cm.UserId == userId)
+            .Include(cm => cm.Chat)
+            .ToListAsync();
+
+        if (memberships.Count == 0)
+        {
+            return Ok(new List<object>());
+        }
+
+        var chatIds = memberships
+            .Select(cm => cm.ChatId)
+            .ToList();
+
+        var allMembers = await _context.Chatmembers
+            .Where(cm => chatIds.Contains(cm.ChatId))
+            .Include(cm => cm.User)
+            .ToListAsync();
+
+        var chats = memberships.Select(cm =>
+        {
+            var chat = cm.Chat;
+
+            if (chat.TypeChat == "Личный")
+            {
+                var otherMember = allMembers
+                    .FirstOrDefault(member =>
+                        member.ChatId == chat.IdChat &&
+                        member.UserId != userId);
+
+                return new
+                {
+                    chatId = chat.IdChat,
+                    name = otherMember != null
+                        ? $"{otherMember.User.Surname} {otherMember.User.Name}"
+                        : "Неизвестный пользователь",
+                    typeChat = chat.TypeChat,
+                    typeGroup = chat.TypeGroup
+                };
+            }
+
+            return new
+            {
+                chatId = chat.IdChat,
+                name = chat.Name,
+                typeChat = chat.TypeChat,
+                typeGroup = chat.TypeGroup
+            };
+        }).ToList();
+
+        return Ok(chats);
+    }
+
+}
+
+
+
+================================================================================
+ФАЙЛ: Controllers\KanbanController.cs
+================================================================================
+
+﻿
+using ASKART.API.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace ASKART.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class KanbanController : ControllerBase
+{
+    private readonly AskartContext _context;
+
+    public KanbanController(AskartContext context)
+    {
+        _context = context;
+    }
+
+    [HttpGet("chat/{chatId}")]
+    public async Task<IActionResult> GetColumns(int chatId)
+    {
+        var chatExists = await _context.Chats
+            .AnyAsync(c => c.IdChat == chatId);
+
+        if (!chatExists)
+        {
+            return NotFound(new { message = "Чат не найден." });
+        }
+
+        var columns = await _context.KanbanColumns
+            .Where(c => c.ChatId == chatId)
+            .OrderBy(c => c.Position)
+            .Select(c => new
+            {
+                columnId = c.IdColumn,
+                chatId = c.ChatId,
+                name = c.Name,
+                color = c.Color,
+                position = c.Position
+            })
+            .ToListAsync();
+
+        return Ok(columns);
+    }
+
+    [HttpPost("chat/{chatId}/initialize")]
+    public async Task<IActionResult> InitializeBoard(int chatId)
+    {
+        var chatExists = await _context.Chats
+            .AnyAsync(c => c.IdChat == chatId);
+
+        if (!chatExists)
+        {
+            return NotFound(new { message = "Чат не найден." });
+        }
+
+        var defaults = new[]
+        {
+            new { Name = "Новая", Color = "#9E9E9E", Position = 1 },
+            new { Name = "В работе", Color = "#5DD4FF", Position = 2 },
+            new { Name = "Выполнена", Color = "#4CAF50", Position = 3 }
+        };
+
+        var existingColumns = await _context.KanbanColumns
+            .Where(c => c.ChatId == chatId)
+            .ToListAsync();
+
+        var added = new List<object>();
+
+        foreach (var item in defaults)
+        {
+            if (existingColumns.Any(c => c.Name == item.Name))
+            {
+                continue;
+            }
+
+            var lastId = existingColumns
+                .Select(c => c.IdColumn)
+                .DefaultIfEmpty(0)
+                .Max();
+
+            var column = new ASKART.API.Models.KanbanColumn
+            {
+                IdColumn = lastId + 1,
+                ChatId = chatId,
+                Name = item.Name,
+                Color = item.Color,
+                Position = item.Position
+            };
+
+            _context.KanbanColumns.Add(column);
+            existingColumns.Add(column);
+
+            added.Add(new
+            {
+                columnId = column.IdColumn,
+                name = column.Name,
+                color = column.Color,
+                position = column.Position
+            });
+        }
+
+        if (added.Count == 0)
+        {
+            return Ok(new
+            {
+                message = "Стандартные колонки уже существуют.",
+                chatId
+            });
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Колонки Kanban созданы.",
+            chatId,
+            columns = added
+        });
+    }
+
+    [HttpPut("{chatId}/{columnId}")]
+    public async Task<IActionResult> UpdateColumn(
+        int chatId,
+        int columnId,
+        UpdateKanbanColumnDto dto)
+    {
+        var column = await _context.KanbanColumns
+            .FirstOrDefaultAsync(c =>
+                c.ChatId == chatId &&
+                c.IdColumn == columnId);
+
+        if (column == null)
+        {
+            return NotFound(new
+            {
+                message = "Колонка не найдена."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Color) ||
+            dto.Color.Length > 20)
+        {
+            return BadRequest(new
+            {
+                message = "Укажите корректный цвет длиной до 20 символов."
+            });
+        }
+
+        if (dto.Position < 1)
+        {
+            return BadRequest(new
+            {
+                message = "Позиция колонки должна быть не меньше 1."
+            });
+        }
+
+        column.Color = dto.Color;
+        column.Position = dto.Position;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Колонка обновлена.",
+            columnId = column.IdColumn,
+            chatId = column.ChatId,
+            name = column.Name,
+            color = column.Color,
+            position = column.Position
+        });
+    }
+}
+
+public class UpdateKanbanColumnDto
+{
+    public string Color { get; set; } = null!;
+
+    public int Position { get; set; }
+}
+
+
+
+================================================================================
+ФАЙЛ: Controllers\MessagesController.cs
+================================================================================
+
+﻿
+using ASKART.API.Data;
+using ASKART.API.DTOs;
+using ASKART.API.Models;
+using ASKART.API.Hubs;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+
+namespace ASKART.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class MessagesController : ControllerBase
+{
+    private readonly AskartContext _context;
+    private readonly IHubContext<ChatHub> _hubContext;
+
+    public MessagesController(
+        AskartContext context,
+        IHubContext<ChatHub> hubContext)
+    {
+        _context = context;
+        _hubContext = hubContext;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SendMessage(SendMessageDto dto)
+    {
+        var chatExists = await _context.Chats
+            .AnyAsync(c => c.IdChat == dto.ChatId);
+
+        if (!chatExists)
+        {
+            return NotFound(new
+            {
+                message = "Чат не найден."
+            });
+        }
+
+        var userExists = await _context.Users
+            .AnyAsync(u => u.IdUser == dto.SenderId);
+
+        if (!userExists)
+        {
+            return NotFound(new
+            {
+                message = "Пользователь не найден."
+            });
+        }
+
+        var isMember = await _context.Chatmembers
+            .AnyAsync(cm =>
+                cm.ChatId == dto.ChatId &&
+                cm.UserId == dto.SenderId);
+
+        if (!isMember)
+        {
+            return BadRequest(new
+            {
+                message = "Пользователь не состоит в этом чате."
+            });
+        }
+
+        if (dto.ReplyId != null)
+        {
+            var replyExists = await _context.Messages
+                .AnyAsync(m =>
+                    m.IdMessage == dto.ReplyId &&
+                    m.ChatId == dto.ChatId);
+
+            if (!replyExists)
+            {
+                return BadRequest(new
+                {
+                    message = "Сообщение, на которое выполняется ответ, не найдено."
+                });
+            }
+        }
+
+        var lastId = await _context.Messages
+            .Select(m => (int?)m.IdMessage)
+            .MaxAsync() ?? 0;
+
+        var message = new Message
+        {
+            IdMessage = lastId + 1,
+            Text = dto.Text,
+            ChatId = dto.ChatId,
+            SenderId = dto.SenderId,
+            ReplyId = dto.ReplyId,
+            SendTime = DateTime.Now
+        };
+
+        _context.Messages.Add(message);
+
+        await _context.SaveChangesAsync();
+
+        var sender = await _context.Users
+            .FirstAsync(u => u.IdUser == dto.SenderId);
+
+        var response = new
+        {
+            messageId = message.IdMessage,
+            text = message.Text,
+            chatId = message.ChatId,
+            senderId = message.SenderId,
+            senderName = $"{sender.Surname} {sender.Name}",
+            replyId = message.ReplyId,
+            sendTime = message.SendTime
+        };
+
+        await _hubContext.Clients
+            .Group($"chat_{message.ChatId}")
+            .SendAsync("ReceiveMessage", response);
+
+        return Ok(response);
+    }
+
+    [HttpGet("chat/{chatId}")]
+    public async Task<IActionResult> GetChatMessages(int chatId)
+    {
+        var chatExists = await _context.Chats
+            .AnyAsync(c => c.IdChat == chatId);
+
+        if (!chatExists)
+        {
+            return NotFound(new
+            {
+                message = "Чат не найден."
+            });
+        }
+
+        var messages = await _context.Messages
+            .Where(m => m.ChatId == chatId)
+            .Include(m => m.Sender)
+            .OrderBy(m => m.SendTime)
+            .Select(m => new
+            {
+                messageId = m.IdMessage,
+                text = m.Text,
+                chatId = m.ChatId,
+                senderId = m.SenderId,
+                senderName = $"{m.Sender.Surname} {m.Sender.Name}",
+                replyId = m.ReplyId,
+                sendTime = m.SendTime,
+                editTime = m.EditTime
+            })
+            .ToListAsync();
+
+        return Ok(messages);
+    }
+
+    [HttpPut("{messageId}")]
+    public async Task<IActionResult> EditMessage(
+        int messageId,
+        [FromBody] string text)
+    {
+        var message = await _context.Messages
+            .FirstOrDefaultAsync(m => m.IdMessage == messageId);
+
+        if (message == null)
+        {
+            return NotFound(new
+            {
+                message = "Сообщение не найдено."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return BadRequest(new
+            {
+                message = "Текст сообщения не может быть пустым."
+            });
+        }
+
+        if (text.Length > 200)
+        {
+            return BadRequest(new
+            {
+                message = "Сообщение не должно превышать 200 символов."
+            });
+        }
+
+        message.Text = text;
+        message.EditTime = DateTime.Now;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            messageId = message.IdMessage,
+            text = message.Text,
+            editTime = message.EditTime
+        });
+    }
+}
+
+
+
+================================================================================
+ФАЙЛ: Controllers\TaskAssigneesController.cs
+================================================================================
+
+﻿
+using ASKART.API.Data;
+using ASKART.API.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace ASKART.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class TaskAssigneesController : ControllerBase
+{
+    private readonly AskartContext _context;
+
+    public TaskAssigneesController(AskartContext context)
+    {
+        _context = context;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddAssignee(
+        [FromBody] TaskAssigneeDto dto)
+    {
+        var task = await _context.Tasks
+            .Include(t => t.Users)
+            .FirstOrDefaultAsync(t => t.IdTask == dto.TaskId);
+
+        if (task == null)
+        {
+            return NotFound(new { message = "Задача не найдена." });
+        }
+
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.IdUser == dto.UserId);
+
+        if (user == null)
+        {
+            return NotFound(new { message = "Пользователь не найден." });
+        }
+
+        var isMember = await _context.Chatmembers
+            .AnyAsync(cm =>
+                cm.ChatId == task.ChatId &&
+                cm.UserId == dto.UserId);
+
+        if (!isMember)
+        {
+            return BadRequest(new
+            {
+                message = "Исполнитель не состоит в чате задачи."
+            });
+        }
+
+        if (task.Users.Any(u => u.IdUser == dto.UserId))
+        {
+            return BadRequest(new
+            {
+                message = "Пользователь уже назначен на эту задачу."
+            });
+        }
+
+        task.Users.Add(user);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Исполнитель назначен.",
+            taskId = task.IdTask,
+            userId = user.IdUser,
+            surname = user.Surname,
+            name = user.Name
+        });
+    }
+
+    [HttpGet("task/{taskId}")]
+    public async Task<IActionResult> GetAssignees(int taskId)
+    {
+        var task = await _context.Tasks
+            .Include(t => t.Users)
+            .FirstOrDefaultAsync(t => t.IdTask == taskId);
+
+        if (task == null)
+        {
+            return NotFound(new { message = "Задача не найдена." });
+        }
+
+        var assignees = task.Users
+            .Select(u => new
+            {
+                userId = u.IdUser,
+                surname = u.Surname,
+                name = u.Name,
+                lastname = u.Lastname,
+                login = u.Login
+            })
+            .ToList();
+
+        return Ok(assignees);
+    }
+
+    [HttpDelete("{taskId}/{userId}")]
+    public async Task<IActionResult> RemoveAssignee(
+        int taskId,
+        int userId)
+    {
+        var task = await _context.Tasks
+            .Include(t => t.Users)
+            .FirstOrDefaultAsync(t => t.IdTask == taskId);
+
+        if (task == null)
+        {
+            return NotFound(new { message = "Задача не найдена." });
+        }
+
+        var user = task.Users
+            .FirstOrDefault(u => u.IdUser == userId);
+
+        if (user == null)
+        {
+            return NotFound(new
+            {
+                message = "Пользователь не назначен на эту задачу."
+            });
+        }
+
+        task.Users.Remove(user);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Исполнитель снят с задачи.",
+            taskId,
+            userId
+        });
+    }
+}
+
+public class TaskAssigneeDto
+{
+    public int TaskId { get; set; }
+
+    public int UserId { get; set; }
+}
+
+
+
+================================================================================
+ФАЙЛ: Controllers\TasksController.cs
+================================================================================
+
+﻿
+using ASKART.API.Data;
+using ASKART.API.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using TaskModel = ASKART.API.Models.Task;
+
+namespace ASKART.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class TasksController : ControllerBase
+{
+    private readonly AskartContext _context;
+
+    public TasksController(AskartContext context)
+    {
+        _context = context;
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateTask(CreateTaskDto dto)
+    {
+        var chatExists = await _context.Chats
+            .AnyAsync(c => c.IdChat == dto.ChatId);
+
+        if (!chatExists)
+        {
+            return NotFound(new { message = "Чат не найден." });
+        }
+
+        var creatorExists = await _context.Users
+            .AnyAsync(u => u.IdUser == dto.CreatorId);
+
+        if (!creatorExists)
+        {
+            return NotFound(new { message = "Создатель задачи не найден." });
+        }
+
+        if (dto.AssigneUserId.HasValue)
+        {
+            var assigneeExists = await _context.Users
+                .AnyAsync(u => u.IdUser == dto.AssigneUserId.Value);
+
+            if (!assigneeExists)
+            {
+                return NotFound(new { message = "Исполнитель не найден." });
+            }
+        }
+
+        if (dto.Priority != "Низкий" &&
+            dto.Priority != "Средний" &&
+            dto.Priority != "Высокий")
+        {
+            return BadRequest(new
+            {
+                message = "Приоритет должен быть: Низкий, Средний или Высокий."
+            });
+        }
+
+        var creatorIsMember = await _context.Chatmembers
+            .AnyAsync(cm =>
+                cm.ChatId == dto.ChatId &&
+                cm.UserId == dto.CreatorId);
+
+        if (!creatorIsMember)
+        {
+            return BadRequest(new
+            {
+                message = "Создатель не состоит в этом чате."
+            });
+        }
+
+        if (dto.AssigneUserId.HasValue)
+        {
+            var assigneeIsMember = await _context.Chatmembers
+                .AnyAsync(cm =>
+                    cm.ChatId == dto.ChatId &&
+                    cm.UserId == dto.AssigneUserId.Value);
+
+            if (!assigneeIsMember)
+            {
+                return BadRequest(new
+                {
+                    message = "Исполнитель не состоит в этом чате."
+                });
+            }
+        }
+
+        var lastId = await _context.Tasks
+            .Select(t => (int?)t.IdTask)
+            .MaxAsync() ?? 0;
+
+        var task = new TaskModel
+        {
+            IdTask = lastId + 1,
+            ChatId = dto.ChatId,
+            Name = dto.Name,
+            Describe = dto.Describe,
+            Status = "Новая",
+            Priority = dto.Priority,
+            Deadline = dto.Deadline ?? DateTime.MinValue,
+            CreatorId = dto.CreatorId,
+            AssigneUserId = dto.AssigneUserId ?? 0
+        };
+
+        _context.Tasks.Add(task);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Задача создана.",
+            taskId = task.IdTask,
+            chatId = task.ChatId,
+            name = task.Name,
+            describe = task.Describe,
+            status = task.Status,
+            priority = task.Priority,
+            deadline = task.Deadline,
+            creatorId = task.CreatorId,
+            assigneUserId = task.AssigneUserId
+        });
+    }
+
+    [HttpGet("chat/{chatId}")]
+    public async Task<IActionResult> GetChatTasks(int chatId)
+    {
+        var chatExists = await _context.Chats
+            .AnyAsync(c => c.IdChat == chatId);
+
+        if (!chatExists)
+        {
+            return NotFound(new { message = "Чат не найден." });
+        }
+
+        var tasks = await _context.Tasks
+            .Where(t => t.ChatId == chatId)
+            .OrderBy(t => t.IdTask)
+            .Select(t => new
+            {
+                taskId = t.IdTask,
+                chatId = t.ChatId,
+                name = t.Name,
+                describe = t.Describe,
+                status = t.Status,
+                priority = t.Priority,
+                deadline = t.Deadline,
+                creatorId = t.CreatorId,
+                assigneUserId = t.AssigneUserId
+            })
+            .ToListAsync();
+
+        return Ok(tasks);
+    }
+
+    [HttpGet("{taskId}")]
+    public async Task<IActionResult> GetTask(int taskId)
+    {
+        var task = await _context.Tasks
+            .Where(t => t.IdTask == taskId)
+            .Select(t => new
+            {
+                taskId = t.IdTask,
+                chatId = t.ChatId,
+                name = t.Name,
+                describe = t.Describe,
+                status = t.Status,
+                priority = t.Priority,
+                deadline = t.Deadline,
+                creatorId = t.CreatorId,
+                assigneUserId = t.AssigneUserId
+            })
+            .FirstOrDefaultAsync();
+
+        if (task == null)
+        {
+            return NotFound(new { message = "Задача не найдена." });
+        }
+
+        return Ok(task);
+    }
+
+    [HttpPut("{taskId}")]
+    public async Task<IActionResult> UpdateTask(
+        int taskId,
+        UpdateTaskDto dto)
+    {
+        var task = await _context.Tasks
+            .FirstOrDefaultAsync(t => t.IdTask == taskId);
+
+        if (task == null)
+        {
+            return NotFound(new { message = "Задача не найдена." });
+        }
+
+        if (dto.Status != "Новая" &&
+            dto.Status != "В работе" &&
+            dto.Status != "Выполнена")
+        {
+            return BadRequest(new
+            {
+                message = "Статус должен быть: Новая, В работе или Выполнена."
+            });
+        }
+
+        if (dto.Priority != "Низкий" &&
+            dto.Priority != "Средний" &&
+            dto.Priority != "Высокий")
+        {
+            return BadRequest(new
+            {
+                message = "Приоритет должен быть: Низкий, Средний или Высокий."
+            });
+        }
+
+        task.Name = dto.Name;
+        task.Describe = dto.Describe;
+        task.Status = dto.Status;
+        task.Priority = dto.Priority;
+
+        if (dto.Deadline.HasValue)
+        {
+            task.Deadline = dto.Deadline.Value;
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Задача обновлена.",
+            taskId = task.IdTask,
+            name = task.Name,
+            describe = task.Describe,
+            status = task.Status,
+            priority = task.Priority,
+            deadline = task.Deadline
+        });
+    }
+
+    [HttpDelete("{taskId}")]
+    public async Task<IActionResult> DeleteTask(int taskId)
+    {
+        var task = await _context.Tasks
+    .Include(t => t.Users)
+    .FirstOrDefaultAsync(t => t.IdTask == taskId);
+
+        if (task == null)
+        {
+            return NotFound(new { message = "Задача не найдена." });
+        }
+
+        task.Users.Clear();
+
+        _context.Tasks.Remove(task);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Задача удалена.",
+            taskId
+        });
+    }
+}
+
+
+
+================================================================================
+ФАЙЛ: Controllers\UsersController.cs
+================================================================================
+
+﻿using ASKART.API.Data;
+using ASKART.API.DTOs;
+using ASKART.API.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace ASKART.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
+{
+    private readonly AskartContext _context;
+
+    public UsersController(AskartContext context)
+    {
+        _context = context;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetUsers()
+    {
+        var users = await _context.Users.ToListAsync();
+
+        return Ok(users);
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginDto dto)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u =>
+                u.Login == dto.Login ||
+                u.Email == dto.Login ||
+                u.Number == dto.Login);
+
+        if (user == null || user.Password != dto.Password)
+        {
+            return Unauthorized(new
+            {
+                message = "Неверный логин, почта, номер телефона или пароль."
+            });
+        }
+
+        return Ok(new
+        {
+            id = user.IdUser,
+            surname = user.Surname,
+            name = user.Name,
+            lastname = user.Lastname,
+            login = user.Login,
+            email = user.Email,
+            number = user.Number
+        });
+    }
+
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(RegisterDto dto)
+    {
+        var loginExists = await _context.Users
+            .AnyAsync(u => u.Login == dto.Login);
+
+        if (loginExists)
+        {
+            return BadRequest(new
+            {
+                message = "Пользователь с таким логином уже существует."
+            });
+        }
+
+        var emailExists = await _context.Users
+            .AnyAsync(u => u.Email == dto.Email);
+
+        if (emailExists)
+        {
+            return BadRequest(new
+            {
+                message = "Пользователь с такой электронной почтой уже существует."
+            });
+        }
+
+        var numberExists = await _context.Users
+            .AnyAsync(u => u.Number == dto.Number);
+
+        if (numberExists)
+        {
+            return BadRequest(new
+            {
+                message = "Пользователь с таким номером телефона уже существует."
+            });
+        }
+
+        var lastId = await _context.Users
+            .Select(u => (int?)u.IdUser)
+            .MaxAsync() ?? 0;
+
+        var user = new User
+        {
+            IdUser = lastId + 1,
+            Surname = dto.Surname,
+            Name = dto.Name,
+            Lastname = dto.Lastname,
+            Login = dto.Login,
+            Password = dto.Password,
+            Number = dto.Number,
+            Email = dto.Email,
+            DataReg = DateTime.Now
+        };
+
+        _context.Users.Add(user);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(user);
+    }
+}
+
+
+
+================================================================================
+ФАЙЛ: Data\AskartContext.cs
+================================================================================
+
+﻿using System;
+using System.Collections.Generic;
+using ASKART.API.Models;
+using Microsoft.EntityFrameworkCore;
+using Pomelo.EntityFrameworkCore.MySql.Scaffolding.Internal;
+using TaskModel = ASKART.API.Models.Task;
+namespace ASKART.API.Data;
+
+public partial class AskartContext : DbContext
+{
+    public AskartContext()
+    {
+    }
+
+    public AskartContext(DbContextOptions<AskartContext> options)
+        : base(options)
+    {
+    }
+
+    public virtual DbSet<Chat> Chats { get; set; }
+
+    public virtual DbSet<Chatmember> Chatmembers { get; set; }
+
+    public virtual DbSet<KanbanColumn> KanbanColumns { get; set; }
+
+    public virtual DbSet<Message> Messages { get; set; }
+
+    public virtual DbSet<TaskModel> Tasks { get; set; }
+
+    public virtual DbSet<User> Users { get; set; }
+
+//    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+//#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+//        => optionsBuilder.UseMySql("server=localhost;database=askart;password=1234;user=root", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.0.44-mysql"));
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder
+            .UseCollation("utf8mb4_0900_ai_ci")
+            .HasCharSet("utf8mb4");
+
+        modelBuilder.Entity<Chat>(entity =>
+        {
+            entity.HasKey(e => e.IdChat).HasName("PRIMARY");
+
+            entity.ToTable("chats");
+
+            entity.Property(e => e.IdChat)
+                .ValueGeneratedNever()
+                .HasColumnName("id_chat");
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .HasColumnName("name");
+            entity.Property(e => e.TypeChat)
+                .HasColumnType("enum('Личный','Группа')")
+                .HasColumnName("type_chat");
+            entity.Property(e => e.TypeGroup)
+                .HasColumnType("enum('Личная','Рабочая')")
+                .HasColumnName("type_group");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+        });
+
+        modelBuilder.Entity<Chatmember>(entity =>
+        {
+            entity.HasKey(e => new { e.ChatId, e.UserId })
+                .HasName("PRIMARY")
+                .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
+
+            entity.ToTable("chatmembers");
+
+            entity.HasIndex(e => e.ChatId, "chat_idx");
+
+            entity.HasIndex(e => e.UserId, "user_idx");
+
+            entity.Property(e => e.ChatId).HasColumnName("chat_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.Role)
+                .HasColumnType("enum('Создатель','Администратор','Участник')")
+                .HasColumnName("role");
+
+            entity.HasOne(d => d.Chat).WithMany(p => p.Chatmembers)
+                .HasForeignKey(d => d.ChatId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("chat");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Chatmembers)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("user");
+        });
+
+        modelBuilder.Entity<KanbanColumn>(entity =>
+        {
+            entity.HasKey(e => new { e.IdColumn, e.ChatId })
+                .HasName("PRIMARY")
+                .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
+
+            entity.ToTable("kanban_columns");
+
+            entity.HasIndex(e => e.ChatId, "chat_id");
+
+            entity.Property(e => e.IdColumn).HasColumnName("id_column");
+            entity.Property(e => e.ChatId).HasColumnName("chat_id");
+            entity.Property(e => e.Color)
+                .HasMaxLength(20)
+                .HasColumnName("color");
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .HasColumnName("name");
+            entity.Property(e => e.Position).HasColumnName("position");
+
+            entity.HasOne(d => d.Chat).WithMany(p => p.KanbanColumns)
+                .HasForeignKey(d => d.ChatId)
+                .HasConstraintName("kanban_columns_ibfk_1");
+        });
+
+        modelBuilder.Entity<Message>(entity =>
+        {
+            entity.HasKey(e => e.IdMessage).HasName("PRIMARY");
+
+            entity.ToTable("messages");
+
+            entity.HasIndex(e => e.ChatId, "chat1_idx");
+
+            entity.HasIndex(e => e.SenderId, "user1_idx");
+
+            entity.Property(e => e.IdMessage)
+                .ValueGeneratedNever()
+                .HasColumnName("id_message");
+            entity.Property(e => e.ChatId).HasColumnName("chat_id");
+            entity.Property(e => e.EditTime)
+                .HasColumnType("datetime")
+                .HasColumnName("edit_time");
+            entity.Property(e => e.ReplyId).HasColumnName("reply_id");
+            entity.Property(e => e.SendTime)
+                .HasColumnType("datetime")
+                .HasColumnName("send_time");
+            entity.Property(e => e.SenderId).HasColumnName("sender_id");
+            entity.Property(e => e.Text)
+                .HasColumnType("text")
+                .HasColumnName("text");
+
+            entity.HasOne(d => d.Chat).WithMany(p => p.Messages)
+                .HasForeignKey(d => d.ChatId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("chat1");
+
+            entity.HasOne(d => d.Sender).WithMany(p => p.Messages)
+                .HasForeignKey(d => d.SenderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("user1");
+        });
+
+        modelBuilder.Entity<TaskModel>(entity =>
+        {
+            entity.HasKey(e => e.IdTask).HasName("PRIMARY");
+
+            entity.ToTable("tasks");
+
+            entity.HasIndex(e => e.ChatId, "chat2_idx");
+
+            entity.HasIndex(e => e.CreatorId, "user_idx");
+
+            entity.Property(e => e.IdTask)
+                .ValueGeneratedNever()
+                .HasColumnName("id_task");
+            entity.Property(e => e.AssigneUserId).HasColumnName("assigne_user_id");
+            entity.Property(e => e.ChatId).HasColumnName("chat_id");
+            entity.Property(e => e.CreatorId).HasColumnName("creator_id");
+            entity.Property(e => e.Deadline)
+                .HasColumnType("datetime")
+                .HasColumnName("deadline");
+            entity.Property(e => e.Describe)
+                .HasColumnType("text")
+                .HasColumnName("describe");
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .HasColumnName("name");
+            entity.Property(e => e.Priority)
+                .HasColumnType("enum('Низкий','Средний','Высокий')")
+                .HasColumnName("priority");
+            entity.Property(e => e.Status)
+                .HasColumnType("enum('Новая','В работе','Выполнена')")
+                .HasColumnName("status");
+
+            entity.HasOne(d => d.Chat).WithMany(p => p.Tasks)
+                .HasForeignKey(d => d.ChatId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("chat2");
+
+            entity.HasOne(d => d.Creator).WithMany(p => p.Tasks)
+                .HasForeignKey(d => d.CreatorId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("user2");
+
+            entity.HasMany(d => d.Users).WithMany(p => p.TasksNavigation)
+                .UsingEntity<Dictionary<string, object>>(
+                    "TaskAssignee",
+                    r => r.HasOne<User>().WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("user5"),
+                    l => l.HasOne<TaskModel>().WithMany()
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("task"),
+                    j =>
+                    {
+                        j.HasKey("TaskId", "UserId")
+                            .HasName("PRIMARY")
+                            .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
+                        j.ToTable("task_assignees");
+                        j.HasIndex(new[] { "TaskId" }, "task_idx");
+                        j.HasIndex(new[] { "UserId" }, "user5_idx");
+                        j.IndexerProperty<int>("TaskId").HasColumnName("task_id");
+                        j.IndexerProperty<int>("UserId").HasColumnName("user_id");
+                    });
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.IdUser).HasName("PRIMARY");
+
+            entity.ToTable("users");
+
+            entity.Property(e => e.IdUser)
+                .ValueGeneratedNever()
+                .HasColumnName("id_user");
+            entity.Property(e => e.Avatar)
+                .HasColumnType("mediumblob")
+                .HasColumnName("avatar");
+            entity.Property(e => e.DataReg)
+                .HasColumnType("datetime")
+                .HasColumnName("data_reg");
+            entity.Property(e => e.Email)
+                .HasMaxLength(50)
+                .HasColumnName("email");
+            entity.Property(e => e.Lastname)
+                .HasMaxLength(50)
+                .HasColumnName("lastname");
+            entity.Property(e => e.Login)
+                .HasMaxLength(30)
+                .HasColumnName("login");
+            entity.Property(e => e.Name)
+                .HasMaxLength(50)
+                .HasColumnName("name");
+            entity.Property(e => e.Number)
+                .HasMaxLength(12)
+                .HasColumnName("number");
+            entity.Property(e => e.Password)
+                .HasMaxLength(20)
+                .HasColumnName("password");
+            entity.Property(e => e.Surname)
+                .HasMaxLength(50)
+                .HasColumnName("surname");
+        });
+
+        OnModelCreatingPartial(modelBuilder);
+    }
+
+    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+}
+
+
+
+================================================================================
+ФАЙЛ: docker-compose.yaml
+================================================================================
+
+﻿services:
+  db:
+    image: mysql:8.0
+    container_name: askart_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: askart
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+  api:
+    build:
+      context: .
+      dockerfile: ASKART.API/Dockerfile
+    container_name: askart_api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=db;Port=3306;Database=askart;User=root;Password=1234;
+      - ASPNETCORE_ENVIRONMENT=Development
+      - DB_HOST=db
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:
+
+networks:
+  askart_network:
+
+
+
+================================================================================
+ФАЙЛ: Dockerfile
+================================================================================
+
+# См. статью по ссылке https://aka.ms/customizecontainer, чтобы узнать как настроить контейнер отладки и как Visual Studio использует этот Dockerfile для создания образов для ускорения отладки.
+
+# Этот этап используется при запуске из VS в быстром режиме (по умолчанию для конфигурации отладки)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER $APP_UID
+WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
+
+
+# Этот этап используется для сборки проекта службы
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["ASKART.API/ASKART.API.csproj", "ASKART.API/"]
+RUN dotnet restore "./ASKART.API/ASKART.API.csproj"
+COPY . .
+WORKDIR "/src/ASKART.API"
+RUN dotnet build "./ASKART.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# Этот этап используется для публикации проекта службы, который будет скопирован на последний этап
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./ASKART.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+# Этот этап используется в рабочей среде или при запуске из VS в обычном режиме (по умолчанию, когда конфигурация отладки не используется)
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "ASKART.API.dll"]
+
+
+
+================================================================================
+ФАЙЛ: DTOs\AddChatMemberDto.cs
+================================================================================
+
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ASKART.API.DTOs;
+
+public class AddChatMemberDto
+{
+    [Required]
+    public int ChatId { get; set; }
+
+    [Required]
+    public int UserId { get; set; }
+
+    [Required]
+    public string Role { get; set; } = null!;
+}
+
+
+
+================================================================================
+ФАЙЛ: DTOs\CreateGroupChatDto.cs
+================================================================================
+
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ASKART.API.DTOs;
+
+public class CreateGroupChatDto
+{
+    [Required(ErrorMessage = "Введите название группы")]
+    [StringLength(100, ErrorMessage = "Название группы не должно превышать 100 символов")]
+    public string Name { get; set; } = null!;
+
+    [Required]
+    public int CreatorId { get; set; }
+
+    [Required(ErrorMessage = "Укажите тип группы")]
+    public string TypeGroup { get; set; } = null!;
+}
+
+
+
+================================================================================
+ФАЙЛ: DTOs\CreatePrivateChatDto.cs
+================================================================================
+
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ASKART.API.DTOs;
+
+public class CreatePrivateChatDto
+{
+    [Required]
+    public int UserId { get; set; }
+
+    [Required]
+    public int OtherUserId { get; set; }
+}
+
+
+
+================================================================================
+ФАЙЛ: DTOs\CreateTaskDto.cs
+================================================================================
+
+﻿
+using System.ComponentModel.DataAnnotations;
+
+namespace ASKART.API.DTOs;
+
+public class CreateTaskDto
+{
+    [Required]
+    public int ChatId { get; set; }
+
+    [Required(ErrorMessage = "Введите название задачи")]
+    [StringLength(100, ErrorMessage = "Название не должно превышать 100 символов")]
+    public string Name { get; set; } = null!;
+
+    [Required(ErrorMessage = "Введите описание задачи")]
+    public string Describe { get; set; } = null!;
+
+    [Required]
+    public int CreatorId { get; set; }
+
+    public int? AssigneUserId { get; set; }
+
+    public DateTime? Deadline { get; set; }
+
+    [Required]
+    public string Priority { get; set; } = null!;
+}
+
+
+
+================================================================================
+ФАЙЛ: DTOs\LoginDto.cs
+================================================================================
+
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ASKART.API.DTOs;
+
+public class LoginDto
+{
+    [Required(ErrorMessage = "Введите логин, почту или номер телефона")]
+    public string Login { get; set; } = null!;
+
+    [Required(ErrorMessage = "Введите пароль")]
+    public string Password { get; set; } = null!;
+}
+
+
+
+================================================================================
+ФАЙЛ: DTOs\RegisterDto.cs
+================================================================================
+
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ASKART.API.DTOs;
+
+public class RegisterDto
+{
+    [Required(ErrorMessage = "Введите фамилию")]
+    public string Surname { get; set; } = null!;
+
+    [Required(ErrorMessage = "Введите имя")]
+    public string Name { get; set; } = null!;
+
+    public string? Lastname { get; set; }
+
+    [Required(ErrorMessage = "Введите логин")]
+    [StringLength(45, MinimumLength = 3,
+        ErrorMessage = "Логин должен содержать от 3 до 45 символов")]
+    public string Login { get; set; } = null!;
+
+    [Required(ErrorMessage = "Введите пароль")]
+    [MinLength(6, ErrorMessage = "Пароль должен содержать минимум 6 символов")]
+    public string Password { get; set; } = null!;
+
+    [Required(ErrorMessage = "Введите номер телефона")]
+    [RegularExpression(
+    @"^(?:\+7|8)\s?\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}$",
+    ErrorMessage = "Введите корректный номер телефона")]
+    public string Number { get; set; } = null!;
+
+    [Required(ErrorMessage = "Введите электронную почту")]
+    [EmailAddress(ErrorMessage = "Введите корректный адрес электронной почты")]
+    [StringLength(45, ErrorMessage = "Email не должен превышать 45 символов")]
+    public string Email { get; set; } = null!;
+}
+
+
+
+================================================================================
+ФАЙЛ: DTOs\SendMessageDto.cs
+================================================================================
+
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ASKART.API.DTOs;
+
+public class SendMessageDto
+{
+    [Required]
+    public int ChatId { get; set; }
+
+    [Required]
+    public int SenderId { get; set; }
+
+    [Required]
+    [StringLength(200, ErrorMessage = "Сообщение не должно превышать 200 символов")]
+    public string Text { get; set; } = null!;
+
+    public int? ReplyId { get; set; }
+}
+
+
+
+================================================================================
+ФАЙЛ: DTOs\UpdateTaskDto.cs
+================================================================================
+
+﻿
+using System.ComponentModel.DataAnnotations;
+
+namespace ASKART.API.DTOs;
+
+public class UpdateTaskDto
+{
+    [Required(ErrorMessage = "Введите название задачи")]
+    [StringLength(100, ErrorMessage = "Название не должно превышать 100 символов")]
+    public string Name { get; set; } = null!;
+
+    [Required(ErrorMessage = "Введите описание задачи")]
+    public string Describe { get; set; } = null!;
+
+    [Required]
+    public string Status { get; set; } = null!;
+
+    [Required]
+    public string Priority { get; set; } = null!;
+
+    public DateTime? Deadline { get; set; }
+}
+
+
+
+================================================================================
+ФАЙЛ: Hubs\ChatHub.cs
+================================================================================
+
+﻿
+using ASKART.API.Data;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+
+namespace ASKART.API.Hubs;
+
+public class ChatHub : Hub
+{
+    private readonly AskartContext _context;
+
+    public ChatHub(AskartContext context)
+    {
+        _context = context;
+    }
+
+    public async Task JoinChat(int chatId, int userId)
+    {
+        var isMember = await _context.Chatmembers
+            .AnyAsync(cm =>
+                cm.ChatId == chatId &&
+                cm.UserId == userId);
+
+        if (!isMember)
+        {
+            throw new HubException(
+                "Пользователь не состоит в этом чате.");
+        }
+
+        await Groups.AddToGroupAsync(
+            Context.ConnectionId,
+            $"chat_{chatId}");
+    }
+
+    public async Task LeaveChat(int chatId)
+    {
+        await Groups.RemoveFromGroupAsync(
+            Context.ConnectionId,
+            $"chat_{chatId}");
+    }
+}
+
+
+
+================================================================================
+ФАЙЛ: Models\Chat.cs
+================================================================================
+
+﻿using System;
+using System.Collections.Generic;
+
+namespace ASKART.API.Models;
+
+public partial class Chat
+{
+    public int IdChat { get; set; }
+
+    public string Name { get; set; } = null!;
+
+    public string TypeChat { get; set; } = null!;
+
+    public string? TypeGroup { get; set; }
+
+    public int UserId { get; set; }
+
+    public virtual ICollection<Chatmember> Chatmembers { get; set; } = new List<Chatmember>();
+
+    public virtual ICollection<KanbanColumn> KanbanColumns { get; set; } = new List<KanbanColumn>();
+
+    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+
+    public virtual ICollection<Task> Tasks { get; set; } = new List<Task>();
+}
+
+
+
+================================================================================
+ФАЙЛ: Models\Chatmember.cs
+================================================================================
+
+﻿using System;
+using System.Collections.Generic;
+
+namespace ASKART.API.Models;
+
+public partial class Chatmember
+{
+    public int ChatId { get; set; }
+
+    public int UserId { get; set; }
+
+    public string Role { get; set; } = null!;
+
+    public virtual Chat Chat { get; set; } = null!;
+
+    public virtual User User { get; set; } = null!;
+}
+
+
+
+================================================================================
+ФАЙЛ: Models\KanbanColumn.cs
+================================================================================
+
+﻿using System;
+using System.Collections.Generic;
+
+namespace ASKART.API.Models;
+
+public partial class KanbanColumn
+{
+    public int IdColumn { get; set; }
+
+    public int ChatId { get; set; }
+
+    public string Name { get; set; } = null!;
+
+    public string Color { get; set; } = null!;
+
+    public int Position { get; set; }
+
+    public virtual Chat Chat { get; set; } = null!;
+}
+
+
+
+================================================================================
+ФАЙЛ: Models\Message.cs
+================================================================================
+
+﻿using System;
+using System.Collections.Generic;
+
+namespace ASKART.API.Models;
+
+public partial class Message
+{
+    public int IdMessage { get; set; }
+
+    public string Text { get; set; } = null!;
+
+    public int ChatId { get; set; }
+
+    public int SenderId { get; set; }
+
+    public int? ReplyId { get; set; }
+
+    public DateTime SendTime { get; set; }
+
+    public DateTime? EditTime { get; set; }
+
+    public virtual Chat Chat { get; set; } = null!;
+
+    public virtual User Sender { get; set; } = null!;
+}
+
+
+
+================================================================================
+ФАЙЛ: Models\Task.cs
+================================================================================
+
+﻿using System;
+using System.Collections.Generic;
+
+namespace ASKART.API.Models;
+
+public partial class Task
+{
+    public int IdTask { get; set; }
+
+    public int ChatId { get; set; }
+
+    public string Name { get; set; } = null!;
+
+    public string? Describe { get; set; }
+
+    public string Status { get; set; } = null!;
+
+    public DateTime Deadline { get; set; }
+
+    public string Priority { get; set; } = null!;
+
+    public int CreatorId { get; set; }
+
+    public int AssigneUserId { get; set; }
+
+    public virtual Chat Chat { get; set; } = null!;
+
+    public virtual User Creator { get; set; } = null!;
+
+    public virtual ICollection<User> Users { get; set; } = new List<User>();
+}
+
+
+
+================================================================================
+ФАЙЛ: Models\TaskAssignee.cs
+================================================================================
+
+﻿using System;
+using System.Collections.Generic;
+
+namespace ASKART.API.Models;
+
+public partial class TaskAssignee
+{
+    public int TaskId { get; set; }
+
+    public int UserId { get; set; }
+
+    public virtual Task Task { get; set; } = null!;
+
+    public virtual User User { get; set; } = null!;
+}
+
+
+
+================================================================================
+ФАЙЛ: Models\User.cs
+================================================================================
+
+﻿using System;
+using System.Collections.Generic;
+
+namespace ASKART.API.Models;
+
+public partial class User
+{
+    public int IdUser { get; set; }
+
+    public string Surname { get; set; } = null!;
+
+    public string Name { get; set; } = null!;
+
+    public string? Lastname { get; set; }
+
+    public string Login { get; set; } = null!;
+
+    public string Password { get; set; } = null!;
+
+    public byte[]? Avatar { get; set; }
+
+    public string Number { get; set; } = null!;
+
+    public DateTime DataReg { get; set; }
+
+    public string? Email { get; set; }
+
+    public virtual ICollection<Chatmember> Chatmembers { get; set; } = new List<Chatmember>();
+
+    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+
+    public virtual ICollection<Task> Tasks { get; set; } = new List<Task>();
+
+    public virtual ICollection<Task> TasksNavigation { get; set; } = new List<Task>();
+}
+
+
+
+================================================================================
+ФАЙЛ: Program.cs
+================================================================================
+
+using ASKART.API.Data;
+using ASKART.API.Hubs;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                       ?? "Server=db;Port=3306;Database=askart;User=root;Password=1234;SslMode=None;";
+
+builder.Services.AddDbContext<AskartContext>(options =>
+    options.UseMySql(
+        connectionString,
+        ServerVersion.Parse("8.0.46-mysql"),
+        mySqlOptions => mySqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null
+        )
+    ));
+
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
+
+app.Run();
+
+
+================================================================================
+КОНЕЦ ФАЙЛА
+================================================================================
